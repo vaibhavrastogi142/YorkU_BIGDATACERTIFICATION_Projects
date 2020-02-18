@@ -1,0 +1,393 @@
+---
+title: "Lab_1"
+author: "Vaibhav Rastogi"
+date: "April 5, 2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(lubridate)
+```
+
+# Basic Descriptive Analytics with R
+
+### Getting Data
+* Open Lab1 and unzip. You should have the following files:
++ IBMStock.csv, GEStock.csv, ProcterGambleStock.csv, CocaColaStock.csv, BoeingStock.csv.
++ Note: don't open the CSVs in Excel before importing to R as it can mess up the Date field
+
+### Importing Data into R
+* Import each CSV into R as a dataframe using the read.csv() function
+* When you import the data, give each dataframe the following names:
++ "IBM", "GE", "ProcterGamble", "CocaCola", and "Boeing"
+```{r read, prompt=TRUE}
+IBM = read.csv('IBMStock.csv')
+GE = read.csv('GEStock.csv')
+ProcterGamble = read.csv('ProcterGambleStock.csv')
+CocaCola = read.csv('CocaColaStock.csv')
+Boeing = read.csv('BoeingStock.csv')
+```
+
+* Each dataframe has two columns:
++ Date: the date of the stock price, always given as the first of the month.
++ StockPrice: the average stock price of the company in the given month.
+
+### Clean Date Field
+* You'll notice the dates will not be in a format R can understand right after you import. Check this out using the str(). What is the data type of the Data variable? ANSWER:
+```{r structure, prompt=TRUE}
+str(IBM$Date)
+str(GE$Date)
+str(ProcterGamble$Date)
+str(CocaCola$Date)
+str(Boeing$Date)
+```
+**the Date field is a Factor data type**   
+
+* We can use the as.Date() to convert the dates. Here's an example of applying for the GE dataframe:
+$ GE$Date = as.Date(GE$Date, "%m/%d/%y") 
++ Using the sample code above, convert the datatype of the date field for all 4 files.
+```{r convert to date, prompt=TRUE}
+IBM$Date = as.Date(IBM$Date, "%m/%d/%y")
+GE$Date = as.Date(GE$Date, "%m/%d/%y")
+ProcterGamble$Date = as.Date(ProcterGamble$Date, "%m/%d/%y")
+CocaCola$Date = as.Date(CocaCola$Date, "%m/%d/%y")
+Boeing$Date = as.Date(Boeing$Date, "%m/%d/%y")
+```
+\pagebreak  
+
+### Warm-up/Basic statistics Questions:
+1. How many rows of data are in each dataset?
+```{r rows, prompt=TRUE}
+nrow(IBM)
+nrow(GE)
+nrow(ProcterGamble)
+nrow(CocaCola)
+nrow(Boeing)
+```
+**each data set has 480 rows**   
+
+2. What is the earliest/latest year in our datasets?  
+
+Stock | Earliest Year | Latest Year
+----- | ------------- | ------------
+IBM | `r min(year(IBM$Date))` | `r max(year(IBM$Date))`
+GE | `r min(year(GE$Date))` | `r max(year(GE$Date))`
+ProcterGamble | `r min(year(ProcterGamble$Date))` | `r max(year(ProcterGamble$Date))`
+CocaCola | `r min(year(CocaCola$Date))` | `r max(year(CocaCola$Date))`
+Boeing | `r min(year(Boeing$Date))` | `r max(year(Boeing$Date))`
+
+3. For the period above what is the average stock price of Coca Cola?
+
+**Average stock price of Coca Cola: `r mean(CocaCola$StockPrice)`**   
+
+4. What is the maximum price of IBM during this period?
+
+**Maximum stock price of IBM: `r max(IBM$StockPrice)`**   
+
+5. What is the standard deviation of P&G stock price over this period?
+
+**Standard deviation of P&G stock price over the period: `r sd(ProcterGamble$StockPrice)`**   
+
+6. What is the median price of Boeing in the last 5 years for which we have data?
+```{r median price for last 5 years, prompt=TRUE}
+(Boeing5YearMedianStockPrice <- Boeing %>%
+  mutate(Year = year(Date)) %>%
+  filter(Year >= (max(year(Date)) - 4)) %>%
+  summarise(MedianStockPrice = median(StockPrice)))
+```
+**Median stock price of Boeing in the last 5 years for which we have data: `r Boeing5YearMedianStockPrice`**  
+\pagebreak  
+
+### Basic Plotting Questions
+**Part 1:** Plot the StockPrice of Coca-Cola on the Y-axis across Date on the x-axis using the basic plot() function.
+```{r plot StockPrice vs Date, prompt=TRUE}
+plot(CocaCola)
+```
+
+What do you see when you use the default plot function what do you see? Scatter-plot, eh? If you want a line graph instead, add the argument type="l" to your plot function.
+```{r plot StockPrice vs Date line graph, prompt=TRUE}
+plot(CocaCola, type= 'l')
+```
+
+**Answer the following questions:**   
+1. Identify the year during which Coca-Cola had the highest/lowest stock price?
+```{r date of highest stock price, prompt=TRUE}
+(CocaColaHigh <- filter(CocaCola, CocaCola$StockPrice == max(CocaCola$StockPrice)))
+```
+**The highest stock price was on `r CocaColaHigh$Date` and the price was `r CocaColaHigh$StockPrice`**   
+
+```{r date of lowest stock price, prompt=TRUE}
+(CocaColaLow <- filter(CocaCola, CocaCola$StockPrice == min(CocaCola$StockPrice)))
+```
+**The lowest stock price was on `r CocaColaLow$Date` and the price was `r CocaColaLow$StockPrice`**   
+
+2. What calendar year did it look to have the biggest (Year-over-Year) percentage increase?
+```{r biggest year-over-year percentage increase, prompt=TRUE}
+CocaColaYearly <- CocaCola %>%
+  mutate(Year = year(Date)) %>%
+  group_by (Year) %>%
+  summarize (LastStockPrice = last(StockPrice)) %>%
+  mutate(StockPriceDiff = c(NA,diff(LastStockPrice)), 
+         PrevLastStockPrice = LastStockPrice - c(NA,diff(LastStockPrice)),
+         PercentDiff = ((c(NA,diff(LastStockPrice)))/(LastStockPrice - c(NA,diff(LastStockPrice)))))
+(CocaColaYearlyMax <- CocaColaYearly %>%
+    filter(near(CocaColaYearly$PercentDiff,max(CocaColaYearly$PercentDiff,na.rm = TRUE))))
+
+```
+**The calendar year with the biggest percent increase (Year-to-Year) is `r CocaColaYearlyMax$Year` with an increase of `r 100 * CocaColaYearlyMax$PercentDiff`%**   
+
+**Part 2:** Next we want to add P&G stock price onto the same graph. If you keep your plot window open
+and type in: lines(ProcterGamble$Date, ProcterGamble$StockPrice) you should see your plot update.
+Go back to the plot function and add argument col="red" and col="blue" argument for CocaCola and
+P&G respectively.
+```{r plot CocaCola and ProcterGamble, prompt=TRUE}
+plot(CocaCola,col='red',type = 'l') 
+lines(ProcterGamble,col = 'blue')
+```
+
+**Answer the following questions:**  
+1. In March of 2000 the stock market plummeted as the tech bubble burst. 
+Using the plot above, which company's stock dropped more (relatively - i.e. percentage-wise)?
+```{r March 2000, prompt=TRUE}
+CocaColaMar <- filter(CocaCola, between(Date, as.Date("2000-02-01"), as.Date("2000-04-01")))
+ProcterGambleMar <- filter(ProcterGamble, between(Date, as.Date("2000-02-01"), as.Date("2000-04-01")))
+plot(CocaColaMar,col='red',type = 'l', ylim=c(0, 100))
+lines(ProcterGambleMar, col = 'blue')
+CocaColaDecr <- last(CocaColaMar$StockPrice) - first(CocaColaMar$StockPrice)
+CocaColaPercDecr <- CocaColaDecr / first(CocaColaMar$StockPrice)
+ProcterGambleDecr <- last(ProcterGambleMar$StockPrice) - first(ProcterGambleMar$StockPrice)
+ProcterGamblePercDecr <- ProcterGambleDecr / first(ProcterGambleMar$StockPrice)
+if (CocaColaDecr < ProcterGambleDecr) { 
+  RelativeDecr = 'CocaCola' } else { 
+  RelativeDecr = 'ProcterGamble' }
+if (CocaColaPercDecr < ProcterGamblePercDecr) { 
+  PercentDecr = 'CocaCola' } else { 
+  PercentDecr = 'ProcterGamble' } 
+```
+Stock | Relative Decrease | Percent-wise Decrease
+----- | ----------------- | ---------------------
+CocaCola | `r CocaColaDecr` | `r CocaColaPercDecr`
+ProcterGamble | `r ProcterGambleDecr` | `r ProcterGamblePercDecr`
+
+**`r RelativeDecr` had a greater relative decrease in March 2000. **
+**`r PercentDecr` had a greater percent-wise decrease in March 2000. **
+
+2. In the year 1983 which company stock was going up? Which was going down?
+```{r 1983, prompt=TRUE}
+CocaCola1983 <- 
+  filter(CocaCola, CocaCola$Date == '1983-12-01')[1,'StockPrice'] - 
+  filter(CocaCola, CocaCola$Date == '1983-01-01')[1,'StockPrice']
+ProcterGamble1983 <- 
+  filter(ProcterGamble, ProcterGamble$Date == '1983-12-01')[1,'StockPrice'] - 
+  filter(ProcterGamble, ProcterGamble$Date == '1983-01-01')[1,'StockPrice']
+```
+**In 1983, CocaCola stock price was `r if (CocaCola1983 > 0) {'going up'} else {'going down'}` **
+**In 1983, ProcterGamble stock price was `r if (ProcterGamble1983 > 0) {'going up'} else {'going down'}` **
+
+3. Across the entire time period shown in your plot which stock had a generally lower price?
+```{r average, prompt=TRUE}
+CocaColaMean <- mean(CocaCola$StockPrice)
+ProcterGambleMean <- mean(ProcterGamble$StockPrice)
+```
+**Over the entire time period `r if (CocaColaMean < ProcterGambleMean) {'CocaCola'} else {'ProcterGamble'}` generally had a lower stock price**   
+\pagebreak  
+
+### Data Visualization from 1995-2005:
+Instead of looking at the plot across the entire date range, we want to see what's happening between 1995-2005. Remember, you can use the matrix notation [rows, columns] to subset data.
+Keeping that in mind what row numbers represent the Dates from 1995-2005?
+```{r 1995-2005 rows, prompt=TRUE}
+(StartRow <- which(CocaCola$Date == as.Date('1995-01-01')))
+(EndRow <- which(CocaCola$Date == as.Date('2005-12-01')))
+```
+**First stock price of the year 1995 sits in row position: `r StartRow`**   
+**Last stock price of the year 2005 sits in row position: `r EndRow`**   
+
+Next, run the command below using the date range you found above. 
+Note: change the values <Your Answer Start> and <Your Answer End> to your answers above.
+```{r 1995-2005 plot, prompt=TRUE}
+plot(CocaCola$Date[StartRow : EndRow], CocaCola$StockPrice[StartRow : EndRow], type="l", col="red", ylim=c(0,210))
+```
+
+* ylim=c(0,210), makes the y-axis range from 0 to 210.
+* type="l" specifies to make it a line graph
+* col="red" tell is to make the line colour red
+**Answer the following questions:**
+1. Which stock price fell the most right after the tech bubble of March 2000?
+```{r March 2000 all stocks, prompt=TRUE}
+StockPrices <- mutate(IBM,Stock = 'IBM') %>%
+  rbind(mutate(GE, Stock = 'GE')) %>%
+  rbind(mutate(ProcterGamble, Stock = 'ProcterGamble')) %>%
+  rbind(mutate(CocaCola, Stock = 'CocaCola')) %>%
+  rbind(mutate(Boeing, Stock = 'Boeing'))
+StockPricesMar <- filter(StockPrices, between(Date, as.Date("2000-02-01"), as.Date("2001-04-01")))
+ggplot(data = StockPricesMar) + 
+  geom_line(mapping = aes(x = Date, y = StockPrice, color = Stock)) +  
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%Y") + 
+  theme(axis.text.x = element_text(angle = 90))
+```
+**In March 2000 ProctorGamble stock prices fell but then a couple months later GE stock prices fell and much more significantly**   
+
+2. What stock had the highest maximum price between 1995-2005?
+```{R 1995-2000 max price, prompt=TRUE}
+StockPrices95_05 <- filter(StockPrices, between(Date, as.Date("1995-01-01"), as.Date("2005-12-01"))) 
+ggplot(data = StockPrices95_05) + 
+  geom_line(mapping = aes(x = Date, y = StockPrice, color = Stock)) +  
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") + 
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+**between 1995 and 2000 IBM had the maximum price of `r max(StockPrices95_05$StockPrice)`**   
+
+3. A few years before the tech bubble of 1997, there was another stock market crash trigged by
+economic crisis in Asia in October of 1997. If you compare stock prices from September 1997 to
+November 1997, which companies saw a decrease in price? Which company experienced the
+biggest decrease?
+```{r October 1997, prompt=TRUE}
+StockPricesOct <- filter(StockPrices, between(Date, as.Date("1997-09-01"), as.Date("1997-11-01")))
+ggplot(data = StockPricesOct) + 
+  geom_line(mapping = aes(x = Date, y = StockPrice, color = Stock)) +  
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%Y") + 
+  theme(axis.text.x = element_text(angle = 90))
+StockPricesOct %>%
+  group_by (Stock) %>%
+  summarise (Difference = last(StockPrice) - first(StockPrice),
+             StartingStockPrice = first(StockPrice),
+             EndingStockPrice = last(StockPrice)) %>%
+  arrange (Difference)
+```
+**ProcterGamble saw the biggest drop in stock prices in October 1997 followed by Boeing having a small drop in stock prices.  CocaCola, IBM & GE stock prices increased slightly during that period**   
+
+4. Which stock seemed to provide the best return (i.e. increase in price) between 2004-2005?
+```{r 2004-2005, prompt=TRUE}
+StockPrices04_05 <- filter(StockPrices, between(Date, as.Date("2004-01-01"), as.Date("2005-12-01")))
+ggplot(data = StockPrices04_05) + 
+  geom_line(mapping = aes(x = Date, y = StockPrice, color = Stock)) +  
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%Y") + 
+  theme(axis.text.x = element_text(angle = 90))
+StockPrices04_05 %>%
+  group_by (Stock) %>%
+  summarise (Difference = last(StockPrice) - first(StockPrice),
+             StartingStockPrice = first(StockPrice),
+             EndingStockPrice = last(StockPrice),
+             PercentDifference = (last(StockPrice) - first(StockPrice))/first(StockPrice)) %>%
+  arrange (PercentDifference)
+```
+**Boeing saw the best return between 2004-2005, both in increase in stock price and percent increase**   
+
+5. Between 1995-2005, which company had the biggest delta between the maximum and
+minimum stock price?
+```{R 1995-2000 biggest delta, prompt=TRUE}
+StockPrices95_05 %>%
+  group_by (Stock) %>%
+  summarise (
+    MinStockPrice = min(StockPrice), 
+    MaxStockPrice = max(StockPrice), 
+    Difference = max(StockPrice) - min(StockPrice)) %>%
+  arrange(Difference)
+```
+**IBM had the biggest delta between their stock price minimum and stock price maximum**   
+
+6. Which two companies' stock price seem to be the most correlated (i.e. move up/down
+together)?  
+```{r}
+StockPricesFlat <- select(Boeing, BoeingStockPrice = StockPrice) %>%
+  cbind(CocaColaStockPrice = CocaCola$StockPrice) %>%
+  cbind(GEStockPrice = GE$StockPrice) %>%
+  cbind(IBMStockPrice = IBM$StockPrice) %>%
+  cbind(ProcterGambleStockPrice = ProcterGamble$StockPrice)
+round(cor(StockPricesFlat), 2)
+```
+**IBM and CocaCola are correlated**
+```{r}
+ggplot(data = StockPricesFlat) + geom_point(mapping = aes(x=CocaColaStockPrice, y=IBMStockPrice))
+StockPrices95_05 %>% 
+  filter(Stock == 'CocaCola'| Stock == 'IBM') %>%
+  ggplot + geom_line(mapping = aes(x = Date, y = StockPrice, color = Stock)) +  
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") + 
+    theme(axis.text.x = element_text(angle = 90))
+```
+\pagebreak  
+
+### Monthly Trend Analysis
+We want to see if there are any monthly patterns (i.e. consistently higher/lower prices at various
+months of the year). To do for each company, we essentially want to compare "mean" by month vs the
+overall mean across the entire date range. Hint: to sort a dataset by months, you can try use
+months(IBM$Date) as the second argument in the tapply() function.
+To learn how to use tapply(), read this: https://www.r-bloggers.com/r-function-of-the-day-tapply-2/
+**Answer the following questions:**
+1. For IBM, compare the average stock price for each month to the its overall average stock price
+and identify all the months for which IBM historically had a higher stock price (we call this overindexing)? Which month over-indexed the most?
+```{r IBM mean by month, prompt=TRUE}
+tapply(IBM$StockPrice, month(IBM$Date), FUN=mean)
+mean(IBM$StockPrice)
+IBM %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(IBM$StockPrice)) %>%
+  ggplot + geom_line(mapping = aes(x = Month, y = Difference))
+```
+**Jan, Feb, Mar, Apr, May have average (mean) stock prices greater than the average stock price**   
+**Feb is over-indexed the most**   
+
+2. Repeat the tapply() function you used to solve the last question for each of the 4 remaining
+companies. Do any of two or more companies have their highest stock price in the same months
+as each other? Which companies and months does this happen for?
+```{r mean by month, prompt=TRUE}
+tapply(GE$StockPrice, month(GE$Date), FUN=mean)
+mean(GE$StockPrice)
+tapply(ProcterGamble$StockPrice, month(ProcterGamble$Date), FUN=mean)
+mean(ProcterGamble$StockPrice)
+tapply(CocaCola$StockPrice, month(CocaCola$Date), FUN=mean)
+mean(CocaCola$StockPrice)
+tapply(Boeing$StockPrice, month(Boeing$Date), FUN=mean)
+mean(Boeing$StockPrice)
+IBMSummary <- IBM %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(IBM$StockPrice), Stock = 'IBM')
+GESummary <- GE %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(GE$StockPrice), Stock = 'GE')
+ProcterGambleSummary <- ProcterGamble %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(ProcterGamble$StockPrice), Stock = 'ProcterGamble')
+CocaColaSummary <- CocaCola %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(CocaCola$StockPrice), Stock = 'CocaCola')
+BoeingSummary <- Boeing %>% 
+  group_by (Month = month(Date)) %>% 
+  summarize(MonthlyAverage = mean(StockPrice)) %>%
+  mutate(Difference = MonthlyAverage - mean(Boeing$StockPrice), Stock = 'Boeing')
+StockSummary <- IBMSummary %>%
+  rbind(GESummary) %>%
+  rbind(ProcterGambleSummary) %>%
+  rbind(CocaColaSummary) %>%
+  rbind(BoeingSummary)
+filter(StockSummary,Difference > 0)
+ggplot(data = StockSummary) + 
+  geom_line(mapping = aes(x = Month, y = Difference, color = Stock))
+```
+**IBM - Jan, Feb, Mar, Apr, May**   
+**GE - Jan, Feb, Mar, Apr, May**   
+**ProctorGamble - Jan, Feb, May, Nov, Dec**   
+**CocaCola - Jan, Feb, Mar, Apr, May, Jun**   
+**Boeing - Feb, Mar, Apr, May, Jun, Aug**   
+**IBM & GE are higher than average on the same months - Jan, Feb, Mar, Apr, May**   
+**all Stocks are higher than average in Feb & May**   
+**all Stocks are lower than average in Sep & Oct**   
+
+3. What trend do you see for the months of December vs January for each company? Is there an
+over-arching trend that applies to all companies when comparing all historical December vs
+January stock prices?  
+
+**January has a higher average Stock Price than December for each Stock**   
+**according to this website https://www.investopedia.com/terms/j/januaryeffect.asp there is something called the December Selloff and the January Effect that causes prices to go up in January over December**   
+**but according to this website http://www.moneychimp.com/features/monthly_returns.htm that has the S&P 500 since 1950, the December Selloff and the January Effect is a myth although September is a particularly bad month**   
