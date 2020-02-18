@@ -1,0 +1,1037 @@
+---
+title: 'Lab 2: Classifying high vs. low risk of credit card default'
+author: 'Vaibhav Rastogi'
+date: "April 19, 2019"
+output:
+  pdf_document:
+    df_print: paged
+    highlight: tango
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, prompt = TRUE)
+library(Hmisc)
+library(Rmisc)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(tidyverse) 
+library(rpart)   
+library(rpart.plot)
+library(ggplot2)
+library(caret)
+library(dplyr)
+library(pROC)
+library(e1071)
+library(randomForest)
+library(pscl)
+```   
+  
+\newpage  
+# Abstract
+We used a data set with 30,000 client credit card records, including six months of transaction history, to assess whether any of three different data mining techniques could accurately classify client groups that were more and less likely to default on payments in the following month.  This publicly-available data set of transactions in Taiwan in 2005 was assembled by researchers concerned about unusual lender and borrower behaviour during recovery from the Asian financial crisis of 1997. As such, and as identified by the original researchers, the findings about specific risk characteristics are not generalizable; however the approach could be used by financial institutions to shape lending practices, and by governments to inform financial stability policy. 
+
+Our exploratory data analysis found that socio-economic characteristics such as gender, education, age and marital status had little bearing on probability of default. This finding is relevant from an ethical standpoint as it supports, at least in this instance, an argument for excluding these characteristics from credit-granting decisions. We observed that clients were most likely to pay their minimum balance duly (versus pay in full, or pay late).  We observed that clients who regularly pay a small percent of their bill are more likely to default on their next payment.  Most clients stayed within their limit, and the most distinctive correlation between defaults and any variable in our dataset was that likelihood of default was greatest amongst those with the lowest credit limits.  This suggests that existing models to evaluate risk in determining credit limit are already working.
+
+Our decision tree model found activity in the most recent month (payment activity and bill amount) to be most predictive of activity in the next month - again, more so than socio-economic characteristics.  Decision tree models are valued in the industry for their transparency, as interpretation is quite intuitive.  While less transparent, our ensemble random forest and logistic regression models were both more effective based on confusion matrix accuracy rate and Area Under the Curve (AUC) Receiver Operating Characteristics (ROC) curve evaluation metrics.  However,the decision tree had the strongest balanced accuracy rate which is relevant given that only about 1/5 of clients default so the data set is asymmetrical.  None of these models perform well enough to stand alone as decision-making models; but industry practice is to use a series of models for credit-granting decisions. 
+
+\newpage
+# Business understanding
+
+## Determine business and data mining objectives
+**Background**  
+A joint Taiwanese/Canadian research initiative published in 2009 compared the utility of various data mining techniques in assessing the probability of credit card client defaults. Researchers Yeh and Lien were concerned that during the recovery from the 1997 Asian Financial Crisis, financial institutions in Taiwan were loosening access to credit in an attempt to increase their market share.  Cash and credit cards were issued to unqualified borrowers, while borrowers, overused these credit cards regardless of their ability to pay.  This state of affairs caused risks to financial stability.  The researchers prepared a data set that is now publicly available to test different approaches to **predicting risk of credit card default**, and promote better risk prediction and risk management.  Their analysis found the artificial neural network to be the most effective of the six data mining techniques tested. (Yeh and Lien, 2009)
+
+Given sensitivity to the macro-economic context, such as the prevalence of unusual behaviour during the observed time period by both financial institutions and borrowers, the specific findings from analysis using this data set are not generalizable.  However, the exercise of applying data mining techniques to better understand risk is replicable with other data sets to generate findings that are valuable from a commercial and public policy perspective.  Furthermore, our analysis builds on this earlier research by exploring feature engineering opportunities to provide additional behavioural insights based on the data provided through new calculated fields.  These calculated fields are a value add relative to previous analysis with this same data set.
+
+**Business and data mining objectives**  
+The financial success of any credit-granting institution depends on accuracy in identifying and pricing risk.  'Credit risk is more important that market risk for many banks (Global Association of Risk Professionals (GARP), 2015).'  Further, there are public policy reasons to understand which types of clients, behavioural patterns, and debt types are risky; for example, to ensure financial stability from a macro-economic perspective, and to identify vulnerable population sub-groups. 
+
+The **business objective** is *to differentiate between higher and lower risk patterns of credit repayment and default behaviour in order to classify clients based on their likelihood of defaulting and inform lending decisions accordingly*.  According to the creators of the data set, credit risk is defined specifically as "the probability of a delay in the repayment of the credit granted (Paolo, 2001).
+
+We approach this as a **classification problem**, one of deriving 'risky' and 'non-risky' classes that are not pre-existing labels in the data. Our business objective, re-stated as **data mining objective** is to understand: *Which groups of clients (by socio-economic characteristics and/or debt and payment behaviour patterns) are more and less likely to default on their next credit card payment?*  
+
+
+**Business and data mining success criteria**  
+As with the initial research, we will test several approaches to classifying clients into those more and less likely to default.  We use **decision tree**, **random forest**, and **logistic regression** data mining techniques.  A successful result would be that one or more of the techniques we test is effective in differentiating between groups by risk of default - using data on actual defaults in October 2005 as a target variable.  In order to assess this we will first **evaluate** our models by comparing a training data set to a test data set, and then by comparing predicted to actual results via a confusion matrix.  We then visualize the effectiveness using an Area Under the Curve (AUC) Receiver Operating Characteristics (ROC) curve, a standard approach for understanding the effectiveness of classification models.  An excellent model would have a score of 1, meaning it correctly predicted all cases, whereas a 0.5 score would mean the model is no better than random.  An AUC of 0.7 would mean a 70% chance that the model is able to classify correctly; success in our approach would be to improve on 70%.
+
+
+## Assess situation
+
+**Resources and constraints**  
+As a group of students new to R, living in different cities and trying to share files across various platforms, working with a tight time constraint, and using a data set new to us, we are limited in some respects in terms of the sophistication of our analysis.  However, we are also fortunate enough to have a wealth of backgrounds amongst our diverse team, including a financial industry professional and a policy analyst to help with our understanding of business need, an experienced programmer to help those of us learning to code, an engineer to help those of us learning to model, and a commitment by team members to work hard to learn new skills.  We have made an effort in this project to stretch ourselves beyond our comfort zones in terms of roles rather than relying on those strongest in each area.
+
+We are working on home computers primarily with R Studio and R Markdown, and drawing on the extensive hive mind of the internet and multiple packages available to us through the R user community, as well as the wealth of resources provided to us as course materials.
+
+
+**Assumptions, risks and contingencies**  
+Any analysis is dependent on the quality of the data, and we are working with publicly available data that is difficult to interrogate.  We relied on the expertise of our industry representative, and secured access to the original research document to mitigate risk by ensuring we understood the data fields.  
+
+A fundamental assumption, which we believe is validated by both sources and our exploratory analysis of the data, is that our target variable, field "Y: default payment" is actual default payments in the month of October 2005. We have defined *default*, based on industry knowledge, as failure to make the minimum payment on time.  Our assumption regarding how we interpreted the data field default with yes/no values are discussed in the data understanding section.
+
+We are using a classification approach, which makes an assumption that there are attributes or features, observable in the data available to us, that meaningfully differentiate between clients by risk of default.
+
+
+## Produce project plan
+Our approach follows the **CRoss-Industry Standard Process for Data Mining (CRISP-DM)** standard process model:
+
+1. **Business understanding**:  we identify a relevant business objective (avoiding defaults) and convert it to an analyticsquestion: *which clients are more and less likely to default?*
+2. **Data understanding**:  we explore data available to us to understand this problem; *which variables (features) exist that could help to predict credit risk (target and explanatory variables)*? 
+3. **Data preparation**:  we clean the data, engineer additional features such as calculated fields, and reduce dimensions to the most relevant predictors
+4. **Modelling**:  we apply modelling techniques; here a decision tree, a random forest, and a logistic regression to understand the problem: *which variables, in combination most effectively differentiate between high risk and low risk clients?* 
+5. **Evaluation**:  we test the effectiveness of our model as a tool to understand the problem: *how effective is each of our models at classifying our clients into high and low risk categories?*
+6. **Deployment**:  we consider how our models could be used to achieve the business objective: *how can we identify risk in making credit adjudication and/or public policy decisions?*
+
+Time and familiarity with new techniques and tools are a risk to reaching our success criteria, and we have worked collaboratively to clearly assign tasks, and to coach one another in areas of development.  We are also actively  managing our critical path to hand off between project stages with time to complete them; e.g., understanding the data and clarifying business need very early on, followed by data cleaning and prep and then splitting data into train and test data sets.  We then handed off the prepared data set to four modellers to concurrently attempt three different machine learning techniques while still allowing time to evaluate, compare and compile results in R Markdown in time for our deadline.  This has been a challenge in the time available to us, increasing the risk of error - in particular due to multiple users inputting at different process stages in a document to be rolled up as one in R Markdown.  A contingency plan would be shifting to a different format for report delivery if we are not able to merge our work at the final stages.
+
+
+**Initial assessment of tools and techniques**  
+After reviewing exploratory analysis of the data together, we determined that we would attempt a decision tree, a random forest, and a regression tree for this analysis.  Packages used for this work are listed in the header or our RMD file.  We also determined that we would use R Markdown to create a PDF, though we note challenges to our workflow collaborating across systems.  
+
+\newpage
+# Data understanding, exploratory analysis and preparation
+
+## Collect initial data  
+The **dataset** we used was downloaded from UCI Machine Learning Repository, Center for Machine Learning and Intelligent Systems <https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients#)>.  As noted earlier, this dataset was compiled by researchers for the purpose of undertaking a data mining exercise and uses administrative data from a financial institution in Taiwan from transactions over a six-month period in 2005.
+
+The dataset was an excel file with the initial row being a set of dummy columns names followed by actual column names.  As a first step, we removed the first row.  The file was also converted to CSV after determining that there would be no data loss or corruption from doing so to make the file easier to read into our scripts.  
+
+```{r read}
+csvfile <- "defaultofcreditcardclients.csv"
+df <- read.csv(csvfile)
+```   
+
+
+## Describe data
+The data set used for this project contains *30,000 client records showing credit card payments and defaults over the period from April to September 2005*.  The **target variable** is actual default payments October 2005, the next month following the six-month time series provided as payment behaviour history.  The data set also includes *23 potential explanatory variables* listed below. Some of these variables describe the clients themselves, while others describe their behaviour patterns as well as their credit limit, monthly bill and monthly payment.
+
+```{r}
+str(df) 
+```   
+
+All of the columns have datatype integer.
+There are `r ncol(df)` columns and `r nrow(df)` rows in the dataset.
+  
+\newpage  
+  
+Here is a sample of the data in the dataset.
+```{r}
+select(df, ID, LIMIT_BAL, SEX, EDUCATION, MARRIAGE, AGE) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(df, PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(df, BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(df, PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(df, default.payment.next.month) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+```   
+
+Explanatory notes provided along with the data help us to interpret these fields.  
+*The payment history fields provide ordinal data on repayment status (e.g., -1 means ???paid duly???, 1 means a one-month payment delay, 2 through 8 mean delays of that number of months, and 9 means a delay of 9 months or more. 
+*The October 2005 target variable field, however, has been converted to binary (Yes = 1, No = 0). Based on industry knowledge and our understanding of the original research we have interpreted that a negative or zero score = 0 (no default in the month of October 2005), while a positive score = 1 (default in October 2005). 
+
+The remainder of this section describes our exploratory analysis of this data set.
+
+```{r}
+df1 <- df
+``` 
+
+\newpage
+  
+### Output Variable
+
+**default.payment.next.month**  
+*How many unique values does default.payment.next.month have?*
+```{r describe default.payment.next.month}
+sort(unique(df1$default.payment.next.month))
+```   
+
+This confirms that there are only 2 values for the target variable, let's have a look at the distribution.  
+```{r, fig.width = 2, fig.height=1.9}
+df1$default.payment.next.month <- factor(df1$default.payment.next.month,levels=c(0,1),labels=c('Paid Duly','Default'))
+df1 %>% group_by('Next month status' = default.payment.next.month) %>% summarise(count = n()) %>% 
+  kable() %>% kable_styling(font_size = 7)
+ggplot(df1, aes(default.payment.next.month)) + geom_bar(fill='purple') +
+  labs(title = "Next Month Status", x = "Status", y = "Count") +
+    theme(text = element_text(size=8))
+```   
+  
+We find that 22.12% of clients defaulted on a payment in the target month (October 2005), and the remaining 77.88% paid duly; that is they paid their minimum payment (or more) on time.
+  
+\newpage  
+  
+### Classification variables
+
+**SEX**  
+*How many unique values are there for SEX?*
+```{r describe SEX}
+sort(unique(df1$SEX))
+```   
+
+There are only 2 values, let's convert to a factor and add the descriptions to the dataframe.  
+```{r, fig.width = 2, fig.height=1.9}
+df1$SEX <- factor(df1$SEX,levels=c(1,2),labels=c('Male','Female'))
+df1 %>% group_by(Sex = SEX) %>% summarise(count = n()) %>% kable() %>% kable_styling(font_size = 7)
+ggplot(df1, aes(SEX)) + geom_bar(fill='green') +
+  labs(title = "Sex", x = "Sex", y = "Count") +
+    theme(text = element_text(size=8))
+```   
+  
+We observe that there are more female clients than male in the sample.
+  
+  
+**EDUCATION**  
+*How many unique values does EDUCATION have?*
+```{r describe EDUCATION}
+sort(unique(df1$EDUCATION))
+```   
+
+There are 7 values for EDUCATION, not all have a known description.
+Let's add the descriptions to the dataframe, setting the unknown ones as Other.  
+```{r, fig.width = 3, fig.height=2.4}
+df1$EDUCATION = factor(df1$EDUCATION,levels=c(0,1,2,3,4,5,6),labels=c('Other','Graduate School','University','High School','Other','Other','Other'))
+df1 %>%
+  group_by('Education level' = EDUCATION) %>% summarise(count = n()) %>% 
+  kable() %>% kable_styling(font_size = 7)
+ggplot(df1, aes(EDUCATION)) + geom_bar(fill='turquoise') +
+  labs(title = "Education Level", x = "Education level", y = "Count") +
+  theme(text=element_text(size=8),axis.text.x=element_text(angle=90,hjust=0))
+```   
+  
+We note that the vast majority of clients have a university degree, or have attended graduate school.
+  
+  
+**MARRIAGE**  
+*How many unique values does MARRIAGE have?*
+```{r describe MARRIAGE}
+sort(unique(df1$MARRIAGE))
+```   
+
+There are 4 values for MARRIAGE, 2 of which do not have a known description. 
+Let's add the descriptions to the dataframe, setting the unknown ones to Other.  
+```{r, fig.width = 2.7, fig.height=2.4}
+df1$MARRIAGE <- factor(df1$MARRIAGE,levels=c(0,1,2,3),labels=c('Other','Married','Single','Other'))
+df1 %>%
+  group_by('Marital Status' = MARRIAGE) %>% summarise(count = n()) %>% kable() %>% kable_styling(font_size = 7)
+ggplot(df1, aes(MARRIAGE)) + geom_bar(fill='orchid') +
+  labs(title = "Marital Status", x = "Marital status", y = "Count") +
+  theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+```   
+  
+We observe that slightly more clients are married than single.
+  
+  
+**PAYMENT HISTORY** 
+As noted earlier, this dataset includes six months of payment history data.  The data is ordinal, reflecting a 'scoring' of behaviour.
+**PAY_# fields**  
+  _**PAY_0**_ has these values [`r sort(unique(df1$PAY_0))`]  
+  _**PAY_2**_ has these values [`r sort(unique(df1$PAY_2))`]  
+  _**PAY_3**_ has these values [`r sort(unique(df1$PAY_3))`]  
+  _**PAY_4**_ has these values [`r sort(unique(df1$PAY_4))`]  
+  _**PAY_5**_ has these values [`r sort(unique(df1$PAY_5))`]  
+  _**PAY_6**_ has these values [`r sort(unique(df1$PAY_6))`]  
+
+*How many of each Pay status is there?*  
+```{r}
+x0 <- df1 %>% group_by('Payment Status' = PAY_0) %>% summarise('PAY_0' = n())
+x2 <- df1 %>% group_by('Payment Status' = PAY_2) %>% summarise('PAY_2' = n())
+x3 <- df1 %>% group_by('Payment Status' = PAY_3) %>% summarise('PAY_3' = n())
+x4 <- df1 %>% group_by('Payment Status' = PAY_4) %>% summarise('PAY_4' = n())
+x5 <- df1 %>% group_by('Payment Status' = PAY_5) %>% summarise('PAY_5' = n())
+x6 <- df1 %>% group_by('Payment Status' = PAY_6) %>% summarise('PAY_6' = n())
+join_all(list(x0,x2,x3,x4,x5,x6), by='Payment Status', type='full') %>% kable() %>% kable_styling(font_size = 7)
+```   
+
+We observe that regardless of month, there is a clear tendency to make minimum payments duly.  Extended delays in payment (3 months or greater) occur infrequently. 
+
+\newpage
+  
+```{r fig.width=5,fig.height=4.5}
+select(mutate(df1,column='PAY_0'),column,PAY=PAY_0) %>%
+  rbind(select(mutate(df1,column='PAY_2'),column,PAY=PAY_2)) %>%
+  rbind(select(mutate(df1,column='PAY_3'),column,PAY=PAY_3)) %>%
+  rbind(select(mutate(df1,column='PAY_4'),column,PAY=PAY_4)) %>%
+  rbind(select(mutate(df1,column='PAY_5'),column,PAY=PAY_5)) %>%
+  rbind(select(mutate(df1,column='PAY_6'),column,PAY=PAY_6)) %>%
+  ggplot(aes(PAY)) + geom_bar(fill='deepskyblue') +
+    labs(title='Payment Status',x = "PAY", y = "Count") + facet_wrap(~column, ncol=2) +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+```   
+  
+  
+### Continuous variables  
+
+**ID**  
+What can we determine by checking the statistics on this variable?  
+```{r ID, fig.width = 2, fig.height=1.4}
+summary(df1$ID)
+ggplot(df1, aes(ID)) + geom_histogram(binwidth = 100,fill='darkorchid') +
+  labs(title='ID',x = "ID", y = "Count") +
+    theme(text = element_text(size=8))
+```   
+  
+The ID column appears to be a sequential number used to identify the rows in the file; a unique client ID used to link data (e.g., tombstone data like gender with transactional records).  There are 30,000 unique records.
+  
+  
+**AGE**   
+What can we determine by checking the statistics on this variable?  
+```{r AGE, fig.width = 4, fig.height=2.1}
+summary(df1$AGE)
+ggplot(df1, aes(AGE)) + geom_bar(fill='seagreen3') +
+  labs(title = "Age", x = "AGE", y = "Count") +
+    theme(text = element_text(size=8))
+```   
+  
+Age range is between 21 and 79 which seems reasonable for credit card clients with the mean & median both being in the mid 30s.  The histogram seems to indicate that AGE is skewed to the right, the mean is only slightly higher than the median.  There are very few clients over 60.
+  
+  
+**LIMIT_BAL**   
+What can we determine by checking the statistics on this variable?  
+```{r LIMIT_BAL, fig.width = 4, fig.height=2.1}
+summary(df1$LIMIT_BAL)
+ggplot(df1, aes(LIMIT_BAL)) + geom_histogram(binwidth = 10000,fill='violetred') +
+  labs(title = "Balance Limit",x='LIMIT_BAL', y = "Count") +
+    theme(text = element_text(size=8))
+```   
+  
+There are no clients with a LIMIT_BAL > 10000.
+While the Maximum is clearly above Q3 + 1.5*IQR, we'll have to compare it to the BILL_AMTs to see if it is a reasonable value.  
+  
+  
+**BILL_AMT# fields**  
+```{r}
+df1 %>% select(starts_with('BILL_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+```   
+
+The first thing we notice is that the mean and median of the BILL_AMTs is increasing in the more recent months.  It is difficult to know if this is a trend based on only 6 months of data, it may be seasonal.  Although one month seems to have a particularly high maximum, the other values for that month (mean/median) seem to be inline with the values for other months.  A comparison between BILL_AMT, LIMIT_BAL and PAY_AMT is required to determine if these values are outliers or would change the results of a model.
+  
+```{r describe_BILL_AMT_plots, fig.width=5,fig.height=5}
+select(mutate(df1,column='BILL_AMT1'),column,BILL_AMT=BILL_AMT1) %>%
+  rbind(select(mutate(df1,column='BILL_AMT2'),column,BILL_AMT=BILL_AMT2)) %>%
+  rbind(select(mutate(df1,column='BILL_AMT3'),column,BILL_AMT=BILL_AMT3)) %>%
+  rbind(select(mutate(df1,column='BILL_AMT4'),column,BILL_AMT=BILL_AMT4)) %>%
+  rbind(select(mutate(df1,column='BILL_AMT5'),column,BILL_AMT=BILL_AMT5)) %>%
+  rbind(select(mutate(df1,column='BILL_AMT6'),column,BILL_AMT=BILL_AMT6)) %>%
+  ggplot(aes(BILL_AMT)) + geom_histogram(binwidth = 10000, fill='blue') +
+    labs(title='Amount Billed',x = "BILL_AMT", y = "Count") + facet_wrap(~column, ncol=2) +
+    theme(text = element_text(size=8))
+```   
+  
+  
+**PAY_AMT# fields**   
+```{r}
+df1 %>% select(starts_with('PAY_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+```    
+  
+The mean and median of the PAY_AMTs is increasing in the more recent months, just like the BILL_AMTs.  Although one month seems to have a particularly high maximum, the other values for that month (mean/median) seem to be inline with the values for other months.  A comparison between BILL_AMT and PAY_AMT is required to determine if these values are outliers or would change the results of a model.
+  
+\newpage
+  
+```{r fig.width=5,fig.height=5}
+select(mutate(df1,column='PAY_AMT1'),column,PAY_AMT=PAY_AMT1) %>%
+  rbind(select(mutate(df1,column='PAY_AMT2'),column,PAY_AMT=PAY_AMT2)) %>%
+  rbind(select(mutate(df1,column='PAY_AMT3'),column,PAY_AMT=PAY_AMT3)) %>%
+  rbind(select(mutate(df1,column='PAY_AMT4'),column,PAY_AMT=PAY_AMT4)) %>%
+  rbind(select(mutate(df1,column='PAY_AMT5'),column,PAY_AMT=PAY_AMT5)) %>%
+  rbind(select(mutate(df1,column='PAY_AMT6'),column,PAY_AMT=PAY_AMT6)) %>%
+  ggplot(aes(PAY_AMT)) + geom_histogram(binwidth = 10000, fill='red') +
+    labs(title='Amount Paid',x = "PAY_AMT", y = "Count") + facet_wrap(~column, ncol=2) +
+    theme(text = element_text(size=8)) 
+```   
+  
+  
+## Explore data 
+
+**Let's see if there is any obvious relationships between input variables and the output variable**  
+First let's find the percent of clients in the dataset who defaulted the next month   
+```{r}
+group_by (df1, 'Next month status' = default.payment.next.month) %>% 
+  summarise(Percent = 100*round(n()/nrow(df1),5)) %>% kable() %>% kable_styling(font_size = 7)
+percent_default = .2212
+```    
+  
+77.88% of the accounts have default.payment.next.month = 0 - are expected to make a payment above the minimum payment amount next month.  
+22.12% of the accounts are expected to default - not pay at least the minimum payment required.  
+
+Now let's compare that percentage to some of the input variables.  
+```{r, fig.width = 3, fig.height=1.6}
+ggplot(df1, aes(SEX, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+  labs(title = "Percent in Default by Sex", x = "SEX", y = "Percent") +
+    theme(text = element_text(size=8)) +
+  geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+We don't see a significant difference in defaults by gender; men are slighly more likely to pay duly.
+
+```{r, fig.width = 4, fig.height=2.4}
+ggplot(df1, aes(EDUCATION, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+  labs(title = "Percent in Default by Education Level ", x = "EDUCATION", y = "Percent") +
+  theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+  geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+We do see a small difference in defaults by education level; clients with lower education levels are slightly more likely to default than those with higher education levels.  The differences are more striking for those with unknown education levels.
+
+```{r, fig.width = 4, fig.height=2.1}
+ggplot(df1, aes(MARRIAGE, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+  labs(title = "Percent in Default by Marital Status", x = "MARRIAGE", y = "Percent")+
+  theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+  geom_hline(yintercept=percent_default, linetype="dashed")
+```  
+
+```{r, fig.width = 4.5, fig.height=2.2}
+df1 %>% mutate(AGE_group = cut2(AGE, g=12, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(AGE_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Age", x = "AGE", y = "Percent")+
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+Though the differences are small, the youngest and oldest clients seem to be slightly more likely to default than those in the middle age ranges. 
+
+None of these **socio-economic characteristics** are showing us anything particularly interesting; again the largest difference seems to be for one of the unknown fields.  Now let's look at clients' **payment behaviour history**.
+
+```{r, fig.width = 5, fig.height=2.4}
+df1 %>% mutate(ID_group = cut2(ID, g=15, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(ID_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by ID", x = "ID", y = "Percent")+
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+  
+This column does not appear to provide any meaningful data about the client as the distribution of defaults is fairly consistent throughout the dataset. 
+  
+```{r fig.width=6,fig.height=5}
+select(mutate(df1,column='PAY_0'),column,PAY=PAY_0,default.payment.next.month) %>%
+  rbind(select(mutate(df1,column='PAY_2'),column,PAY=PAY_2,default.payment.next.month)) %>%
+  rbind(select(mutate(df1,column='PAY_3'),column,PAY=PAY_3,default.payment.next.month)) %>%
+  rbind(select(mutate(df1,column='PAY_4'),column,PAY=PAY_4,default.payment.next.month)) %>%
+  rbind(select(mutate(df1,column='PAY_5'),column,PAY=PAY_5,default.payment.next.month)) %>%
+  rbind(select(mutate(df1,column='PAY_6'),column,PAY=PAY_6,default.payment.next.month)) %>%
+  ggplot(aes(PAY,fill=default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title='Percent in Default by Payment Status',x = "PAY", y = "Percent") + 
+    facet_wrap(~column, ncol=2) +
+    theme(text = element_text(size=8)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+Clearly, clients who have a Payment status > 0 are more likely to default as per these plots.  Since our target variable has only 2 values, 0 for made at least the minimum payment and 1 for default it may make sense to convert these variables to having 2 values as opposed to 11 for modeling purposes.
+
+```{r, fig.width = 6, fig.height=2.4}
+df1 %>% mutate(LIMIT_BAL_group = cut2(LIMIT_BAL, g=30, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(LIMIT_BAL_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Balance Limit", x = "LIMIT_BAL", y = "Percent") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+   
+Clients with lower limits appear to be more likely to default than clients with higher limits.  Perhaps this is why they don't have a higher balance.  This suggests that risk assessments used to determine credit limits are already working well.
+   
+```{r}
+df2 <- df1
+```   
+
+Now, let's check to see if there is any **dependancies between variables** and any **patterns in the data.**  
+
+  _**Do clients tend to get the same BILL_AMT and PAY_AMT each month?**_    
+Is there any correlation between the average BILL_AMT and the BILL_AMTs for each month?
+```{r}
+df2 <- mutate(df2,avg_BILL_AMT = (BILL_AMT1+BILL_AMT2+BILL_AMT3+BILL_AMT4+BILL_AMT5+BILL_AMT6)/6)
+summary(df2$avg_BILL_AMT)
+```   
+
+The distribution looks similar to the individual bill amounts.  
+  
+```{r, fig.width = 4, fig.height=2.1}
+ggplot(df2, aes(avg_BILL_AMT)) + geom_histogram(binwidth = 10000,fill='blue2') +
+  labs(title='Average Amount Billed',x = "Average BILL_AMT", y = "Count") +
+    theme(text = element_text(size=8)) +
+  scale_x_continuous(label=comma)
+```   
+  
+The graph loots very similar to the individual BILL_AMT graphs but smoother.
+  
+```{r fig.width=5,fig.height=5}
+select(mutate(df2,column='BILL_AMT1'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT1) %>%
+  rbind(select(mutate(df2,column='BILL_AMT2'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT2)) %>%
+  rbind(select(mutate(df2,column='BILL_AMT3'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT3)) %>%
+  rbind(select(mutate(df2,column='BILL_AMT4'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT4)) %>%
+  rbind(select(mutate(df2,column='BILL_AMT5'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT5)) %>%
+  rbind(select(mutate(df2,column='BILL_AMT6'),avg_BILL_AMT,column,BILL_AMT=BILL_AMT6)) %>%
+  ggplot(aes(avg_BILL_AMT,BILL_AMT)) + geom_point(color='blue1') +
+    labs(title='Average Amount Billed vs Amount Billed',x = "Average BILL_AMT", y = "BILL_AMT") + 
+    facet_wrap(~column, ncol=2) +
+    theme(text = element_text(size=8))
+```   
+
+The distribution looks similiar.  It looks like clients have a tendency to bill a similar amount each months.  
+```{r fig.width=6}
+df2 %>% select(BILL_AMT1,BILL_AMT2,BILL_AMT3,BILL_AMT4,BILL_AMT5,BILL_AMT6,avg_BILL_AMT) %>%
+  cor() %>% kable() %>% kable_styling(font_size = 7)
+```   
+  
+The correlation is very high so can we use the avg_BILL_AMT instead?  
+  
+Does the average amount billed have any correlation to increased likelyhood of defaulting on the next payment?
+```{r, fig.width = 6, fig.height=2.9}
+df2 %>% mutate(avg_BILL_AMT_group = cut2(avg_BILL_AMT, g=30, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(avg_BILL_AMT_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Average Amount Billed", x = "avg_BILL_AMT", y = "Percent") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+Clients with a lower average amount billed are a little more likely to default.
+
+Let's do the same to see if there is any correlation between the average PAY_AMT and the PAY_AMTs for each month?
+```{r}
+df2 <- mutate(df2,avg_PAY_AMT = (PAY_AMT1+PAY_AMT2+PAY_AMT3+PAY_AMT4+PAY_AMT5+PAY_AMT6)/6)
+summary(df2$avg_PAY_AMT)
+```   
+
+The distribution looks similar to the individual PAY amounts. 
+  
+```{r, fig.width = 4, fig.height=2.1}
+ggplot(df2, aes(avg_PAY_AMT)) + geom_histogram(binwidth = 10000,fill='red2') +
+  labs(title='Average Amount Paid',x = "Average PAY_AMT", y = "Count") +
+    theme(text = element_text(size=8)) +
+  scale_x_continuous(label=comma)
+```   
+  
+This graph looks similar to the graphs for the individual PAY_AMTs.  
+  
+```{r describe_PAY_AMT_plots, fig.width=5,fig.height=5}
+select(mutate(df2,column='PAY_AMT1'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT1) %>%
+  rbind(select(mutate(df2,column='PAY_AMT2'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT2)) %>%
+  rbind(select(mutate(df2,column='PAY_AMT3'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT3)) %>%
+  rbind(select(mutate(df2,column='PAY_AMT4'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT4)) %>%
+  rbind(select(mutate(df2,column='PAY_AMT5'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT5)) %>%
+  rbind(select(mutate(df2,column='PAY_AMT6'),avg_PAY_AMT,column,PAY_AMT=PAY_AMT6)) %>%
+  ggplot(aes(avg_PAY_AMT,PAY_AMT)) + geom_point(color='red1') +
+    labs(title='Average Amount Paid vs Amount Paid',x = "Average PAY_AMT", y = "PAY_AMT") + 
+    facet_wrap(~column, ncol=2) +
+    theme(text = element_text(size=8))
+```   
+
+It is difficult to tell the level of correlation of the individual PAY_AMTs and the average PAY_AMT from the graphs.  Let's check the correlation matrix.  
+  
+```{r fig.width=6}
+df2 %>% select(PAY_AMT1,PAY_AMT2,PAY_AMT3,PAY_AMT4,PAY_AMT5,PAY_AMT6,avg_PAY_AMT) %>%
+  cor() %>% kable() %>% kable_styling(font_size = 7)
+```   
+  
+The correlation here is not as high as it was for BILL_AMT.  The correlation between the different PAY_AMTs is significantly lower.  When comparing the individual PAY_AMTs to the average the correlation is higher than it is when comparing the individual PAY_AMTs to each other.  Does that mean that people pay off their bills irregularly even when the bill amounts are relatively consistent?  Perhaps the Average PAY_AMT would be a better indicator of future payments than any individual PAY_AMT.  Let's compare the average amount paid to the target variable.
+```{r, fig.width = 6, fig.height=2.9}
+df2 %>% mutate(avg_PAY_AMT_group = cut2(avg_PAY_AMT, g=30, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(avg_PAY_AMT_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Average Amount Paid", x = "avg_PAY_AMT", y = "Percent") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed")
+```   
+
+Clients with a lower average amount paid are a little more likely to default, that makes sense.  Clients who make higher payments are less likely.  THis seems more useful than looking at BILL_AMT.
+
+  _**Is there a relationship between the LIMIT_BAL and the BILL_AMT?**_  
+Let's take the average BILL_AMT as a percentage of LIMIT_BAL.  
+```{r fig.width = 4, fig.height=2.1}
+df2 <- mutate(df2,over_limit = round(100*avg_BILL_AMT/LIMIT_BAL,2))
+
+summary((df2$over_limit))
+
+ggplot(df2, aes(LIMIT_BAL,avg_BILL_AMT)) + geom_point(color='magenta') +
+    labs(title='Balance Limit vs Average Amount Billed',x='LIMIT_BAL',y = "Average BILL_AMT") + 
+    theme(text = element_text(size=8))
+``` 
+  
+Most clients stay within their limit, some stay well under.  
+  
+  _**Are clients who are regularly over their limit more likey to default?**_    
+Using the percentage of of the average BILL_AMT/LIMIT_BAL is there any pattern when compared to who defaulted on their next payment?  
+```{r, fig.width = 6, fig.height=2.4}
+df2 %>%
+  mutate(over_limit_group = cut2(over_limit, g=20, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(over_limit_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Percent Over Limit", x = "Percent Over Limit", y = "Percent")+
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed") 
+```   
+  
+It is interesting to observe that clients whose bills are negative, under, or close to their limit without going over have a slightly higher probability of defaulting.  While it is not surprising that clients who are regularly over their limit would be more likely to default on their next payment.
+  
+  _**The BILL_AMT graphs and the PAY_AMT graphs have similar shapes, is one dependent on the other?**_  
+Let's compare the averages.
+```{r, fig.width = 4, fig.height=2.1}
+df2 %>% 
+#  filter(avg_BILL_AMT < 750000, avg_PAY_AMT < 200000) %>%
+  ggplot() + geom_point(aes(avg_BILL_AMT,avg_PAY_AMT),colour='purple') + 
+    labs(title='Average Amount Billed vs Average Amount Paid',x='Average BILL_AMT', y = "Average PAY_AMT") +
+    theme(text = element_text(size=8)) +
+    scale_x_continuous(label=comma) +
+    scale_y_continuous(label=comma)
+```   
+  
+It appears some clients do not regularly pay their bill in full.  Are they more likely to default?
+  
+```{r}
+df2 %>% select(avg_BILL_AMT,avg_PAY_AMT) %>%
+  cor() %>% kable() %>% kable_styling(font_size = 7)
+```   
+  
+There isn't a particularly high correlation between the Average BILL_AMT and Average PAY_AMT.
+
+  _**Are clients who regularly pay less than their bill more likely to default?**_    
+Again using the average BILL_AMT and average PAY_AMT.  
+Let's assume that if the BILL_AMT <=0 that they should be considered as paying 100%.  
+```{r}
+df2 <- mutate(df2, percent_paid = case_when(avg_BILL_AMT<=0~100,
+                                       TRUE~round(100*avg_PAY_AMT/avg_BILL_AMT,2)))
+summary(df2$percent_paid)
+```  
+  
+In order to do a histogram of values we need to cap the percent paid at a reasonable level so the graph shows meaningful information.  Let's just throw everything over 150% into 151% for this histogram
+```{r, fig.width = 4, fig.height=2.1}
+df2 %>% 
+  mutate(percent_paid_cap = case_when(percent_paid>150~151,
+                                        TRUE~percent_paid)) %>%
+  ggplot(aes(percent_paid_cap)) + geom_histogram(binwidth = 1, fill='purple') +
+    labs(title='Percent Paid',x = "Percent Paid", y = "Count") +
+    theme(text = element_text(size=8))
+```   
+
+We see that a significant number of clients do not pay their whole bill, they only pay a small percentage, then there is another spike at exactly 100, and then there are clients who pay more than their bill.  I think we can assume that this is not a mistake since the number is fairly significant and that possible they are prepaying their next bill.  
+
+```{r, fig.width = 6, fig.height=3.1}
+df2 %>% mutate(percent_paid = case_when(avg_BILL_AMT<=0~100,
+                                        TRUE~round(100*avg_PAY_AMT/avg_BILL_AMT,2))) %>%
+  mutate(percent_paid_group = cut2(percent_paid, g=20, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(percent_paid_group, fill = default.payment.next.month)) + geom_bar(position = "fill") +
+    labs(title = "Percent in Default by Percent Paid", x = "Percent Paid", y = "Percent")+
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed") 
+```   
+  
+It is not surprising to observe that clients who regularly pay on a small percent of their bill are more likely to default on their next payment.  
+  
+  _**Are the PAY_# columns related to the percentage paid on the previous bill?**_    
+Let's compare the percentage paid for BILL_AMT2 to PAY_0 which indicates their status after paying PAY_AMT1.  
+We will assume that if BILL_AMT2 <= 0 that the percent_paid, regardless of the amount is 100%.
+```{r, fig.width = 6.5, fig.height=3.1}
+df2 %>% 
+  mutate(PAY_0_factor = as.factor(PAY_0)) %>%
+  mutate(percent_paid = case_when(BILL_AMT2<=0~100,
+                                        TRUE~round(100*PAY_AMT1/BILL_AMT2,2))) %>%
+  mutate(percent_paid_group = cut2(percent_paid, g=33, minmax=TRUE, oneval=TRUE)) %>%
+  ggplot(aes(percent_paid_group, fill = PAY_0_factor)) + geom_bar(position = "fill") +
+    labs(title = "Percent in each Pay Status by Percent Paid", x = "Percent Paid", y = "Percent")+
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0)) +
+    geom_hline(yintercept=percent_default, linetype="dashed") 
+```   
+  
+The clients with a PAY status of 0 fill the majority of the percentage range > 3% and less than 100%, that confirms the assumption that 0 means they have paid at least the minimum payment due but not the full amount. 
+We have questions about some of the remaining values as there are clients who paid 0 percent of their bill (where the bill > 0) with a status of -1 (Paidup) and those that paid more than 100% who still have a status indicating a delay of a few months.  For this reason the PAY_# columns do not seem to be correlated to the percentage paid and the columns should remain in the dataset for modeling.  A lengthier study with greater access to the records could clarify whether this is in fact a data quality issue.
+  
+\newpage 
+## Verify data quality
+**Are there any missing values?**   
+```{r missing_values}
+colSums(is.na(df)) %>% kable()
+```   
+  
+There are no missing values in the dataset.  
+  
+**Are there unexpected or unknown values for any of the variable?**  
+```{r}
+e = nrow(filter(df1,EDUCATION==0|EDUCATION==4|EDUCATION==5|EDUCATION==6))
+m = nrow(filter(df1,MARRIAGE==0|MARRIAGE==3))
+eandm = nrow(filter(df1,EDUCATION==0|EDUCATION==4|EDUCATION==5|EDUCATION==6,MARRIAGE==0|MARRIAGE==3))
+eorm = nrow(filter(df1,EDUCATION==0|EDUCATION==4|EDUCATION==5|EDUCATION==6|MARRIAGE==0|MARRIAGE==3))
+```   
+
+There are 4 unexpected values for EDUCATION that were not defined in the dataset description.  These 4 values are found on `r e` of the `r nrow(df1)` rows or `r round(100*e/nrow(df1),1)`% of the dataset.  
+There are 2 unexpected values for MARRIAGE that were not defined in the dataset description.  These 2 values are found on `r m` of the `r nrow(df1)` rows or `r round(100*m/nrow(df1),1)`% of the dataset.  
+`r eandm` clients have both an unknown EDUCATION and unnown MARRIAGE, that makes for `r eorm` rows that have 1 or the other or both values unknown making up `r round(100*eorm/nrow(df1),1)`% of the dataset.  
+  
+Although we are not entirely sure what some of PAY status values mean, this does not mean the values are bad data and should still be included for modeling.  
+  
+## Select and clean data
+Given that this data set was built for machine learning purposes, and specifically for classification techniques, we were fortunate that the dataset was already in good shape for our purposes. 
+
+We removed the ID column for modeling purposes.  This is the key for defining individual client records and potentially linking to the data sets, however would be misleading as a risk characteristics.  
+
+Since the unknown values for Marriage and Education are only a small percentage of the dataset and since their correlation to the target variable did not differ significantly from the other known values, we will leave these as they are in the dataset. 
+
+We looked at **outliers** and determined that the AGE values are reasonable.  In our exploratory analysis, we looked at each of the characteristics and conducted analysis to understand the LIMIT_BAL, BILL_AMTs and PAY_AMTs in relation to one another rather than in isolation. We did not identify outliers of concern; this may well be due to the prepatory work on this dataset by the original researchers.
+  
+  
+## Construct data
+We did attempt to build on the earlier analysis with some feature engineering by introducing new calculated fields.  For example, we derived variables calculating the averages over the six months of financial transaction data: avg BILL_AMT, avg_PAY_AMT.  We looked at the relationship between of bills to credit limits: Over_Limit_Percent.  We also added a field to explore amoung paid in relation to amount owing: Paid_Percent.  
+We can then see if these aggregated variables give better or worse results.    
+```{r}
+df3 <- df
+df3 <- mutate(df3,BILL_AMT_avg = (BILL_AMT1+BILL_AMT2+BILL_AMT3+BILL_AMT4+BILL_AMT5+BILL_AMT6)/6)
+df3 <- mutate(df3,PAY_AMT_avg = (PAY_AMT1+PAY_AMT2+PAY_AMT3+PAY_AMT4+PAY_AMT5+PAY_AMT6)/6)
+df3 <- mutate(df3,over_limit = round(100*BILL_AMT_avg/LIMIT_BAL,2))
+df3 <- mutate(df3, percent_paid = case_when(BILL_AMT_avg<=0~100,
+                                       TRUE~round(100*PAY_AMT_avg/BILL_AMT_avg,2)))
+```
+  
+\newpage
+# Modelling
+
+## Select modelling approach
+We assessed the business and data mining problem requirements, as well as our team's capability in terms of technique complexity, and selected the following three modelling techniques:
+1. Decision tree
+2. Random forest
+3. Logistic regression
+Our approach will compare the suitability of each of these models in addressing our business requirement.
+
+
+## Generate test design
+In developing our test design, it was important for the comparability of the models that we randomize the data within the training and testing data sets, but at the same time use a consistent data set to compare all of the models.  Given time constraints we have opted for a simpler approach to developing the testing and training data sets, however it is nevertheless important that it be robust.  The 70/30 split allows most of the data to be used to train the model - the more data, the better the quality of the result.  However holding back a substantial share of the data - 30% - nevertheless provides sufficient testing data to also enable a robust test result.
+
+**Divide data into 70/30 test/train**
+```{r}
+set.seed(22)
+dt = sort(sample(nrow(df3), nrow(df3)*0.7))
+train <- df3[dt,]
+test <- df3[-dt,]
+```
+
+The original dataset is split into 2 data sets; one for training the model and the other for testing the model with 70% of the original data randomly selected for the training dataset and the remaining 30% put into the test dataset.
+
+dataset | rows
+------- | ----
+train | `r nrow(train)`
+test  | `r nrow(test)`
+total | `r nrow(df3)`
+
+**Check data distribution of the target variable between train and test**
+```{r}
+x1 <- group_by(train,default.payment.next.month) %>% summarise('Train Count'=n(),'Train Percent'=100*round(n()/nrow(train),5)) 
+x2 <- group_by(test,default.payment.next.month) %>% summarise('Test Count'=n(),'Test Percent'=100*round(n()/nrow(test),5))
+join_all(list(x1,x2), by='default.payment.next.month', type='full') %>% kable() %>% kable_styling(font_size = 7)
+```
+
+**Check data distribution of input variables between train and test**
+```{r}
+x1 <- group_by(train,SEX) %>% summarise('Train Percent' = 100*round(n()/nrow(train),5)) 
+x2 <- group_by(test,SEX) %>% summarise('Test Percent' = 100*round(n()/nrow(test),5))
+join_all(list(x1,x2), by='SEX', type='full') %>% kable() %>% kable_styling(font_size = 7)
+
+x1 <- group_by(train,EDUCATION) %>% summarise('Train Percent' = 100*round(n()/nrow(train),5)) 
+x2 <- group_by(test,EDUCATION) %>% summarise('Test Percent' = 100*round(n()/nrow(test),5))
+join_all(list(x1,x2), by='EDUCATION', type='full') %>% kable() %>% kable_styling(font_size = 7)
+
+x1 <- group_by(train,MARRIAGE) %>% summarise('Train Percent' = 100*round(n()/nrow(train),5)) 
+x2 <- group_by(test,MARRIAGE) %>% summarise('Test Percent' = 100*round(n()/nrow(test),5))
+join_all(list(x1,x2), by='MARRIAGE', type='full') %>% kable() %>% kable_styling(font_size = 7)
+
+x1 <- group_by(train,PAY_status=PAY_0) %>% summarise(dataset='train','PAY_0 ' = 100*round(n()/nrow(train),5)) 
+x2 <- group_by(train,PAY_status=PAY_2) %>% summarise(dataset='train','PAY_2 ' = 100*round(n()/nrow(train),5)) 
+x3 <- group_by(train,PAY_status=PAY_3) %>% summarise(dataset='train','PAY_4 ' = 100*round(n()/nrow(train),5)) 
+x4 <- group_by(train,PAY_status=PAY_4) %>% summarise(dataset='train','PAY_3 ' = 100*round(n()/nrow(train),5)) 
+x5 <- group_by(train,PAY_status=PAY_5) %>% summarise(dataset='train','PAY_5 ' = 100*round(n()/nrow(train),5)) 
+x6 <- group_by(train,PAY_status=PAY_6) %>% summarise(dataset='train','PAY_6 ' = 100*round(n()/nrow(train),5)) 
+x <- join_all(list(x1,x2,x3,x4,x5,x6), by='PAY_status', type='full')
+y1 <- group_by(test,PAY_status=PAY_0) %>% summarise(dataset='test','PAY_0 ' = 100*round(n()/nrow(test),5)) 
+y2 <- group_by(test,PAY_status=PAY_2) %>% summarise(dataset='test','PAY_2 ' = 100*round(n()/nrow(test),5)) 
+y3 <- group_by(test,PAY_status=PAY_3) %>% summarise(dataset='test','PAY_4 ' = 100*round(n()/nrow(test),5)) 
+y4 <- group_by(test,PAY_status=PAY_4) %>% summarise(dataset='test','PAY_3 ' = 100*round(n()/nrow(test),5)) 
+y5 <- group_by(test,PAY_status=PAY_5) %>% summarise(dataset='test','PAY_5 ' = 100*round(n()/nrow(test),5)) 
+y6 <- group_by(test,PAY_status=PAY_6) %>% summarise(dataset='test','PAY_6 ' = 100*round(n()/nrow(test),5)) 
+y <- join_all(list(y1,y2,y3,y4,y5,y6), by='PAY_status', type='full')
+x %>% rbind(y) %>% 
+  arrange(PAY_status,desc(dataset)) %>% kable() %>% kable_styling(font_size = 7)
+
+train %>% select(starts_with('BILL_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+test %>% select(starts_with('BILL_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+
+train %>% select(starts_with('PAY_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+test %>% select(starts_with('PAY_AMT')) %>% summary() %>% kable() %>% kable_styling(font_size = 7)
+
+```
+
+## Build model
+
+### Decision Tree Model
+**Building**  
+Now that we have developed testing and training data sets, we are ready to build our first machine learning model, using the Decision Tree classification technique. The purpose of this technique is to classify groups, sub-groups, sub-subgroups etc., based on the characteristics that differentiate most clearly between two groups' (based on the target variable) at each level of the hierarchy.  
+
+```{r}
+csvfile <- "defaultofcreditcardclients.csv"
+dt_df <- read.csv(csvfile)
+#head(dt_df)
+#str(dt_df)
+#apply(dt_df,2, function(x) length(unique(x)))
+#cols<-c("SEX", "EDUCATION","MARRIAGE", "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6", "default.payment.next.month")
+#for (i in cols){
+#  dt_df[,i] <- as.factor(dt_df[,i])
+#}
+``` 
+
+In order to enable the decision tree to compare unlike values, we converted the SEX, MARRIAGE, EDUCATION fields to factors with levels.  The numerical values in the payment fields would have seemed far larger than these factors, so we converted them to a two value factors, with -2, -1, 0 mapping to 0 (no default) and 1-8 mapping to 1 (default). 
+```{r}
+dt_df$SEX <- factor(dt_df$SEX, levels = c(1, 2), labels = c('Male', 'Female'))
+dt_df$MARRIAGE <- factor(dt_df$MARRIAGE, levels = c(0, 1, 2, 3), labels = c('Others', 'Married', 'Single', 'Others'))
+dt_df$EDUCATION <- factor(dt_df$EDUCATION, levels = c(1, 2, 3, 4, 5, 6), labels = c('Graduate School', 'University', 'High School', 'Others', 'Others', 'Others'))
+dt_df$PAY_0 <- factor(dt_df$PAY_0, levels = c(-2,-1,0, 1, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$PAY_2 <- factor(dt_df$PAY_2, levels = c(-2,-1,0, 1, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$PAY_3 <- factor(dt_df$PAY_3, levels = c(-2,-1,0, 1, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$PAY_4 <- factor(dt_df$PAY_4, levels = c(-2,-1,0, 1, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$PAY_5 <- factor(dt_df$PAY_5, levels = c(-2,-1,0, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$PAY_6 <- factor(dt_df$PAY_6, levels = c(-2,-1,0, 1, 2, 3, 4, 5, 6, 7, 8), labels = c( "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "1"))
+dt_df$default.payment.next.month <- as.factor(dt_df$default.payment.next.month)
+```
+
+And now, having split our data into train and test datasets, we are ready to run our Decision Tree model on our training dataset, using the rpart package                        
+
+```{r}
+set.seed(22)
+dt = sort(sample(nrow(dt_df), nrow(dt_df)*.7))
+dt_train <- dt_df[dt,]
+dt_test <- dt_df[-dt,]
+```
+
+```{r}
+dt_model <- rpart(default.payment.next.month~., data = dt_train, method = 'class')
+rpart.plot(dt_model)
+```
+
+A benefit of the decision tree model is that the results are transparent and simple to visualize and interpret.  We observe that the PAY 0 = 0 field is the first level split, meaning that it differentiates more than any other characteristic between those most and least likely to default on payment in the target month.  The 77% of clients who paid duly in month 0 were presumably less likely to default in the following month relative to the 23% of clients those who did not pay duly in month 0.  The latter group is split a second time by bill amount;17% of all clients (a subset of the 23%) had bill amounts in month 1 of more than $577, while 6% had bill amounts below that - and this threshold appears to have been significant in differentiating risk.  It is worth noting that these findings suggest that observations (payment activity and bill amount) in the previous month are most predictive of activity in the next month - more so than socio-economic characteristics. 
+
+**Assessing**  
+We now use two approaches to evaluate the effectiveness of this technique in establishing groups with different risks of default:  a confusion matrix (accuracy and balance test), and a ROC-AUC plot, introducing in the first section regarding how we will determine whether each of our modelling approaches has been succesful.
+
+First, we test accuracy using a **confusion matrix**.  
+
+```{r}
+predict_dt_test <-predict(dt_model, dt_test, type = 'class')
+confusionMatrix(predict_dt_test, dt_test$default.payment.next.month)
+#confusionMatrix
+```
+We observe that classifying clients into the three groups described above can predict default behaviour with an 80% accuracy rate; a balanced accuracy rate of 67%.
+
+Second, we test accuracy using a **ROC-AUC plot**.
+
+```{r}
+dt_model_roc <- predict(dt_model, dt_test, type = 'prob')
+dt_auc <- auc(dt_test$default.payment.next.month, dt_model_roc[,1])
+```
+```{r}
+plot(roc(dt_test$default.payment.next.month, dt_model_roc[,1]))
+```
+```{r}
+dt_auc
+```
+
+###Random Forest Model
+**Building**  
+Now that we have developed a relatively simple decision tree, we attempt a more complex ensemble approach using the random forest technique.  This approach effectively constructs a multitude of decision trees, and takes the mean of the regression output of the individual trees' predictions.  The concept is to enhance the predictive power and reduce over-fitting by averaging the results of many models.   
+
+```{r}
+csvfile <- "defaultofcreditcardclients.csv"
+rf_df <- read.csv(csvfile)
+rf_df <- select(df,-ID)
+rf_df$default.payment.next.month <- as.factor(rf_df$default.payment.next.month)
+```
+
+```{r}
+set.seed(22)
+dt <- sort(sample(nrow(rf_df), nrow(rf_df)*0.7))
+rf_train <- rf_df[dt,]
+rf_test <- rf_df[-dt,]
+```
+
+```{r}
+model <- randomForest(default.payment.next.month ~ ., data = rf_train, ntree = 500, mtry = 5, importance = TRUE)
+```
+
+First, we predict on our test data set.  Unlike the decision tree, the result is difficult to visualize.
+
+```{r}
+predict_rf_test <- predict(model, rf_test, type = "class")
+```
+
+**Assessing**
+
+We now use two approaches to evaluate the effectiveness of this technique in classifying clients accurately into groups with different risks of default:  a confusion matrix (accuracy and balance test), and a ROC-AUC plot, introducing in the first section regarding how we will determine whether each of our modelling approaches has been succesful.
+
+Again, we first, test accuracy using a **confusion matrix**.  
+
+```{r}
+expected <- rf_test$default.payment.next.month
+predicted <- predict_rf_test
+results <- confusionMatrix(data=predicted, reference=expected)
+results
+```
+
+We observe that this model can predict default behaviour with an 81.33% accuracy rate; a balanced accuracy rate of 65.15%.
+
+Second, we test accuracy using a **ROC-AUC plot**.  
+
+```{r}
+rf_roc<-roc(rf_train$default.payment.next.month,model$votes[,2])
+```
+```{r}
+plot(rf_roc)
+```
+```{r}
+auc(rf_roc)
+```
+
+
+### Logistic Regression Model
+**Building**  
+Last but not least, we undertake a logistic regression model.  This is another classification technique, used for binary problems (two possible outcomes, e.g., default yes or no) to explain the relationship between indpendant variables and a dependant variable. This approach builds on linear regression models by predicting a probability.  The probability output makes this technique attractive to financial institutions.
+
+As discussed erlier, we have categorical variables - SEX, EDUCATION, MARRIAGE. Using dummy variables, which we will convert to numeric variables so that we can use them in our model. We cannot use categorical variables directly for this model.
+
+```{r}
+csvfile <- "defaultofcreditcardclients.csv"
+lr_df <- read.csv(csvfile)
+lr_df <- select(df,-ID)
+lr_df$IFMALE <- ifelse(lr_df$SEX == 1,1,0)
+lr_df$IFFEMALE <- ifelse(lr_df$SEX == 2,1,0)
+#converting EDUCATION into dummy variables
+lr_df$IFGRADSCHOOLED <- ifelse (lr_df$EDUCATION == 1,1,0)
+lr_df$IFUNIVERSITYED <- ifelse (lr_df$EDUCATION == 2,1,0)
+lr_df$IFHIGHSCHOOLED <- ifelse (lr_df$EDUCATION == 3,1,0)
+#converting MARRIAGE into dummy variables
+lr_df$IFOTHERED <- ifelse (lr_df$EDUCATION==4|lr_df$EDUCATION==5|lr_df$EDUCATION==6|lr_df$EDUCATION==0,1,0)
+lr_df$IFMARRIED <- ifelse (lr_df$MARRIAGE==1,1,0)
+lr_df$IFSINGLE <- ifelse (lr_df$MARRIAGE==2,1,0)
+lr_df$IFOTHERMARITALSTATUS <- ifelse(lr_df$MARRIAGE==3|lr_df$MARRIAGE==0,1,0)
+
+```
+
+```{r}
+set.seed(22)
+dt <- sort(sample(nrow(lr_df), nrow(lr_df)*0.7))
+lr_train <- lr_df[dt,]
+lr_test <- lr_df[-dt,]
+```
+
+**Logistic Regression (1st Iteration)**  
+We will use the glm function to build the logistic regression model and identify the variables for which p-values are statistically significant (less than 0.05 since we are considering 95% significance).
+
+We have dropped SEX, EDUCATION and MARRIAGE variables from the modeling because we have converted them into dummy variables and are using them for our modeling.
+
+We are using LOGIT form of logistic regression here. Finally we use mcfadden R squared and AIC values to assess the fit of the model.  
+```{r}
+#Building the logistic regression model, feeding the variables and defining the paramters
+lr_model <- glm(default.payment.next.month ~LIMIT_BAL+AGE+PAY_0+PAY_2+PAY_3+PAY_4+PAY_5+PAY_6+BILL_AMT1+BILL_AMT2+BILL_AMT3+BILL_AMT4+BILL_AMT5+BILL_AMT6+PAY_AMT1+PAY_AMT2+PAY_AMT3+PAY_AMT4+PAY_AMT5+PAY_AMT6+IFMALE+IFFEMALE+IFGRADSCHOOLED+IFUNIVERSITYED+IFHIGHSCHOOLED+IFOTHERED+IFMARRIED+IFSINGLE+IFOTHERMARITALSTATUS,family=binomial(link='logit'),data = lr_train)
+
+#generating result metrics of the model
+#summary(lr_model)
+#generating error and fit measures for the model
+#anova(lr_model, test="Chisq")
+#library(pscl)
+#pR2(lr_model)
+
+```
+
+In the above results of the first iteration of our model we notice the following variables have p-values less than 0.05 implying statisical significance - LIMIT_BAL, AGE, PAY_0, PAY_2, PAY_3, BILL_AMT1,BILL_AMT3, PAY_AMT1, PAY_AMT2, PAY_AMT4, PAY_AMT6, IFMALE, IFGRADSCHOOLED, IFUNIVERSITYED, IFHIGHSCHOOLED. 
+
+We also notice there are some errors in the model because of singularities. This is because of perfect negative correlation between them and the other category variables. IFFEMALE is perfectly negatively correlated with IFMALE and because those are the only two outputs in our dataset. We eliminate such variables from our model along with those for which the p-values are not statistically significant and run the second iteration of the model
+
+**Second Iteration for Logistic Regression Model**  
+```{r}
+#running second iteration for logistic regression model with statistically significant variables
+lr_model2 <- glm(default.payment.next.month ~LIMIT_BAL+AGE+PAY_0+PAY_2+PAY_3+BILL_AMT1+BILL_AMT3+PAY_AMT1+PAY_AMT2+PAY_AMT4+PAY_AMT6+IFMALE+IFGRADSCHOOLED+IFUNIVERSITYED+IFHIGHSCHOOLED,family=binomial(link='logit'),data = lr_train)
+#generating the metrics of the model
+#summary(lr_model2)
+
+#generating the error and fit measures
+#anova(lr_model2, test="Chisq")
+#library(pscl)
+#pR2(lr_model2)
+
+```
+
+In the second iteration of the logistic regression model, we find that all variables have p-values less than 0.05 which means they are all statistically significant. AIC value is 19543 and mcfadden rsq is 1.174734e-01 
+
+
+**Predicting on test set**
+```{r}
+predict_lr_test <- predict(lr_model2, lr_test, type = 'response')
+predict_lr_test <- ifelse(predict_lr_test>0.5,1,0)
+```
+
+**Assessing**  
+
+First, we test accuracy using a **confusion matrix**.  
+```{r}
+expected <- as.factor(lr_test$default.payment.next.month)
+predicted <- as.factor(predict_lr_test)
+results <- confusionMatrix(data=predicted, reference=expected)
+results
+```
+
+We observe that this technique can predict default behaviour with an 80.91% accuracy rate; and a balanced accuracy rate of 60.66%.
+
+Second, we test accuracy using a **ROC-AUC plot**.  
+```{r}
+lr_roc<-roc(lr_train$default.payment.next.month,model$votes[,2])
+```
+```{r}
+plot(lr_roc)
+```
+```{r}
+auc(lr_roc)
+```
+
+\newpage  
+# Results
+
+## Evaluation and comparison of model accuracy
+As explained in the previous section, we used three different classification techniques to attempt to predict which groups of clients would be more and less likely to default on their next credit card payment.  For each of these techniques, we used two approaches to evaluating their effectiveness; a confusion matrix with accuracy score and a ROC-AUC model. Using a consistent approach across the modelling techniques enables us to compare which of the three was most effective in solving our data mining problem.
+
+Our **confusion matrix accuracy rates** were 81.33% for the random forest ensemble model, 80.91% for the logistic regression model, and 80.24% for the decision tree.  Thus the random forest model performed best according to this metric, with the others not far behind.  According to the **AUC-ROC curve**, the random forest and logistic regression models performed equally effectively with scores of 76.6%, and the decision tree performed less well at 69.07%. However the decision tree had the best **balanced accuracy** result a 67.13% decision tree, followed by 65.15% random forest, and 60.66% for the logistic regression model.  This is relevant given that only about 1/5 of clients default so the data set is asymmetrical.  
+
+None of these models perform well enough to stand alone as decision-making models; but industry practice is to use a series of models for credit-granting decisions, as we discuss in the deployment section.
+
+## Review process
+From a **workflow** perspective, as we familiarize ourselves with the tools there are opportunities to strengthen our approach to collaboration, sequencing, and critical path management.  An area to improve would be our strategy in managing hand-off zones between coding tasks, and clarifying the platforms for exchanges.  A strength of our approach, however, was our considerable investment in time and resource up front to explore and understand our data set thoroughly (primarily Angie, with input from Oye and Kari).  Our tasking strategies were also effective: one team member (Angie) prepared and cleaned our data, another (Jatin) developed our train/test data set, and then we tasked four separate team members (Vaibhav, Angie, Jatin, and Kari) with concurrently developing and running the models using the same train/test data to ensure comparability of results. This optimised our resource, and we also built in redundancy by having both Jatin and Kari test the same decision tree technique.  As time became a concern, Jatin refined the analysis and Kari shifted to comparing and compiling the results and analysis with support and an industry perspective from Oye.
+
+From an **ethical** standpoint, we note that any dataset including input variables such socio-economic status markers should be assessed carefully.  We have used a publicly available data set, so have not given consideration to privacy concerns, which may be relevant in other contexts. Moreover, some of the socio-economic characteristics (e.g., sex, marital status, age) may be useful in understanding and predicting risk, but inappropriate for deploying results to inform action.  For example, even if gender were found to be predictive of default risk, it is likely prohibited grounds for making decisions about access to credit from a human rights perspective in Canada.  At the same time, from a public policy perspective it may be useful to know if gender is related to risk of default, for example to target financial literacy campaigns.
+
+\newpage
+# Deployment
+
+## Interested parties
+As noted in the introduction, given the provenance of our data set, there are limits to the relevance of our specific findings with respect to classification of sub-groups in informing decision-making and action.  However, the approach will be useful to the interested parties/stakeholders listed below for credit risk identification, mitigation and monitoring:  
+1. **Financial Institutions** who provide retail loans (credit cards, lines of credit, mortgages, etc.)  
+2. **Government Agencies** responsible for enforcing consumer protection laws and developing macroprudential policies to ensure financial stability.
+
+For the financial institutions the deployment of the models is a proactive measure, to aid the credit adjudication process and reduce the incidence of bad loans and provisions for loan losses. Banks typically use a more complex combination of models to assess the **probability of default (PD)** of a client. "A bank might rely on a combination of causal models, historical frequency models, credit scoring models and credit rating agency models to assess a borrower PD. (GARP, 2015)." In other words, the modelling exercise here would be a small component of a series of complementary risk assessment exercises that would combine to inform predictive tools used to score prospective borrower's PD.
+
+For the Government Agencies to a lesser extent, the deployment of the model is a more reactive process, as policies are usually introduced after major credit events that have adverse impacts on consumers, borrowing entities and lending entities.  Recall, for example, the impact of mortgage lending to unqualified borrowers as a driver of the global financial crisis in 2007-2008.  Nevertheless following the crisis, there has been a concerted international focus on monitoring debt levels and household financial security.
+
+
+## Plan deployment
+"A sound credit process follows a number of critical steps: i) identify a credit opportunity, ii) evaluate prospective borrower, iii) make credit decision, iv) disburse credit, v) monitor credit. (GARP, 2015)."  For a financial institution, a model like this - once refined to suit their context - could be deployed in two phases to contribute to the evaluation and decision steps.  The first phase will be to integrate the model into the existing credit infrastructure using an updated client historical data set. The results will be evaluated using a confusion matrix and the associated measures for accuracy (e.g. precision, prevalence, balanced accuracy, etc.) with thresholds set for the minimum acceptance criteria for the results. The second phase will be the full integration and handover of the day-to-day functions to the Model Risk IT Team. The model development lifecycle will also be incorporated to ensure continuous improvement, such that models do not become redundant over time.
+
+
+## Other data to be collected
+Data on credit risk factors should be continuously collected even for insignificant factors, which may become significant and/or have other interactions with significant factors. Unsupervised learning algorithms can be used to at regular intervals (bi-monthly, quarterly) to identify clusters/associations between these risk factors which can be used to re-train and re-test the model to improve its predictive accuracy and remain up to date with the macro-environment. The result from the newly collected data may result in a new release and deployment of an updated model.
+
+In terms of developing a more comprehensive view of risk, financial institutions (or other interested parties) would look at a broader ranges of metrics in addition to PD, including loss given default (LGD) and expected loss (EL) which is are measure of the financial consequences for the bank of a client default, duration to default (D), recovery rate (RR), and spread (S); the distribution for pricing credit-linked obligations (GARP, 2015).
+
+
+## Plan monitoring and maintenance
+Typically credit is driven by factors/events like the direction of interest rates and other events in the macro-economy like loosening or tightening of credit policies. As this credit risk events evolve the models need to be re-evaluated to incorporate new significant risk inputs or remove old risk factors that are no longer significant for credit adjudication.
+
+
+# Bibliography
+**Data Source** 
+UCI Machine Learning Default of Credit Card Clients Data Set: <https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients> 
+
+**Original Research Paper**
+Yeh, I. C., & Lien, C. H. (2009). *The comparisons of data mining techniques for the predictive accuracy of probability of default of credit card clients*. Expert Systems with Applications, 36(2), 2473-2480.
+
+**Other Resources**
+Global Association of Risk Professionals (2015).  *Credit Risk Management: Financial Risk and Regulation Series.*
