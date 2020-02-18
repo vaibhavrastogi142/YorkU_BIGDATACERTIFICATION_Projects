@@ -1,0 +1,502 @@
+<?xml version="1.0"?>
+<AlteryxDocument yxmdVer="2018.4">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="78" y="66" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="0">C:\Users\vaibh\Documents\project_clean_feb10-1.csv</File>
+          <FormatSpecificOptions>
+            <CodePage>28591</CodePage>
+            <Delimeter>,</Delimeter>
+            <IgnoreErrors>False</IgnoreErrors>
+            <FieldLen>254</FieldLen>
+            <AllowShareWrite>False</AllowShareWrite>
+            <HeaderRow>True</HeaderRow>
+            <IgnoreQuotes>DoubleQuotes</IgnoreQuotes>
+            <ImportLine>1</ImportLine>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText>project_clean_feb10-1.csv</DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+        <Dependencies>
+          <Implicit />
+        </Dependencies>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="Id" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Model" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Price" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Age_08_04" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Mfg_Month" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Mfg_Year" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="KM" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Fuel_Type" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="IF_Diesel" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="IF_petrol" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="IF_cng" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="HP" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Met_Color" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Automatic" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="cc" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Doors" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Cylinders" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Gears" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Quarterly_Tax" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Weight" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Mfr_Guarantee" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="BOVAG_Guarantee" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Guarantee_Period" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="ABS" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Airbag_1" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Airbag_2" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Airco" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Automatic_airco" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Boardcomputer" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="CD_Player" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Central_Lock" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Powered_Windows" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Power_Steering" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Radio" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Mistlamps" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Sport_Model" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Backseat_Divider" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Metallic_Rim" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Radio_cassette" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Tow_Bar" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="Quarterly_Tax_range" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="&gt;85" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="69-85" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="&lt;69" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isD4D" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isTERRA" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isSOL" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isVVT" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isSPORT" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isVVTLI" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isCOMFORT" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isLINEA" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isLUNA" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isWAGON" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isLIFT" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isHATCH" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+            <Field name="isSEDAN" size="254" source="File: C:\Users\vaibh\Documents\project_clean_feb10-1.csv" type="V_String" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings>
+        <Position x="270" y="66" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Value name="do target">False</Value>
+          <Value name="target">Price</Value>
+          <Value name="target level" />
+          <Value name="use fields">"Age_08_04","KM","Weight","Automatic_airco","Boardcomputer","isVVT","isLINEA"</Value>
+          <Value name="Pearson">True</Value>
+          <Value name="Spearman">False</Value>
+          <Value name="Hoeffding">False</Value>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <Dependencies>
+          <Implicit />
+        </Dependencies>
+      </Properties>
+      <EngineSettings Macro="Predictive Tools\Association_Analysis.yxmc" />
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BrowseV2.BrowseV2">
+        <Position x="534" y="126" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TempFile>C:\Users\vaibh\AppData\Local\Temp\Engine_1163476_f3c7d088b25d4253ade485691b29b8c8_\Engine_80080_9c55f16cae164e74831bba89e7f58e93_.yxdb</TempFile>
+          <TempFileDataProfiling />
+          <Layout>
+            <ViewMode>Single</ViewMode>
+            <ViewSize value="100" />
+            <View1>
+              <DefaultTab>Report</DefaultTab>
+              <Hints>
+                <Table />
+              </Hints>
+            </View1>
+            <View2 />
+          </Layout>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBrowseV2" />
+    </Node>
+    <Node ToolID="4">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BrowseV2.BrowseV2">
+        <Position x="366" y="126" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TempFile>C:\Users\vaibh\AppData\Local\Temp\Engine_1163476_f3c7d088b25d4253ade485691b29b8c8_\Engine_80080_708962e685ec4441bd5f91b24e4a421c_.yxdb</TempFile>
+          <TempFileDataProfiling />
+          <Layout>
+            <ViewMode>Single</ViewMode>
+            <ViewSize value="100" />
+            <View1>
+              <DefaultTab>Report</DefaultTab>
+              <Hints>
+                <Table />
+              </Hints>
+            </View1>
+            <View2 />
+          </Layout>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBrowseV2" />
+    </Node>
+    <Node ToolID="6">
+      <GuiSettings Plugin="Linear_Regression">
+        <Position x="258" y="138" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Value name="curPage">Home</Value>
+          <Value name="curTab">advanced</Value>
+          <Value name="standardize_pred">True</Value>
+          <Value name="internal_cv">True</Value>
+          <Value name="display_graphs">True</Value>
+          <Value name="set_seed_internal_cv">True</Value>
+          <Value name="set_seed_external_cv">True</Value>
+          <Value name="lambda_1se">True</Value>
+          <Value name="lambda_min">False</Value>
+          <Value name="Model Name">Linear_Regression_6</Value>
+          <Value name="Y Var">Price</Value>
+          <Value name="X Vars">Age_08_04,KM,Weight,Automatic_airco</Value>
+          <Value name="Omit Constant">False</Value>
+          <Value name="Use Weights">False</Value>
+          <Value name="Weight Vec" />
+          <Value name="regularization">False</Value>
+          <Value name="alpha">0.5</Value>
+          <Value name="nfolds">5</Value>
+          <Value name="lambda">lambda_1se</Value>
+          <Value name="seed_internal_cv">1</Value>
+          <Value name="lambda_no_cv">0.5</Value>
+          <Value name="external_cv">False</Value>
+          <Value name="nfolds_external">5</Value>
+          <Value name="numberTrials">3</Value>
+          <Value name="external_seed_value">1</Value>
+          <Value name="graph.resolution">1x</Value>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText>Linear_Regression_6</DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings Macro="Linear_Regression/Supporting_Macros/Linear_Regression.yxmc" EngineDll="Macro" EngineDllEntryPoint="Linear_Regression/Supporting_Macros/Linear_Regression.yxmc" />
+    </Node>
+    <Node ToolID="7">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BrowseV2.BrowseV2">
+        <Position x="402" y="174" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TempFile>C:\Users\vaibh\AppData\Local\Temp\Engine_1163476_f3c7d088b25d4253ade485691b29b8c8_\Engine_80080_a68c0837715445d49117a9f11dbf5382_.yxdb</TempFile>
+          <TempFileDataProfiling />
+          <Layout>
+            <ViewMode>Single</ViewMode>
+            <ViewSize value="100" />
+            <View1>
+              <DefaultTab>Report</DefaultTab>
+              <Hints>
+                <Table />
+              </Hints>
+            </View1>
+            <View2 />
+          </Layout>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBrowseV2" />
+    </Node>
+    <Node ToolID="8">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BrowseV2.BrowseV2">
+        <Position x="486" y="138" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TempFile>C:\Users\vaibh\AppData\Local\Temp\Engine_1163476_f3c7d088b25d4253ade485691b29b8c8_\Engine_80080_867586b65531497fa3a902e1e99671de_.yxdb</TempFile>
+          <TempFileDataProfiling />
+          <Layout>
+            <ViewMode>Single</ViewMode>
+            <ViewSize value="100" />
+            <View1>
+              <DefaultTab>Report</DefaultTab>
+              <Hints>
+                <Table />
+              </Hints>
+            </View1>
+            <View2 />
+          </Layout>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBrowseV2" />
+    </Node>
+    <Node ToolID="9">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+        <Position x="174" y="66" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <OrderChanged value="False" />
+          <CommaDecimal value="False" />
+          <SelectFields>
+            <SelectField field="Price" selected="True" type="Double" size="8" />
+            <SelectField field="Age_08_04" selected="True" type="Double" size="8" />
+            <SelectField field="KM" selected="True" type="Double" size="8" />
+            <SelectField field="IF_Diesel" selected="True" type="Double" size="8" />
+            <SelectField field="IF_petrol" selected="True" type="Double" size="8" />
+            <SelectField field="IF_cng" selected="True" type="Double" size="8" />
+            <SelectField field="HP" selected="True" type="Double" size="8" />
+            <SelectField field="Met_Color" selected="True" type="Double" size="8" />
+            <SelectField field="Automatic" selected="True" type="Double" size="8" />
+            <SelectField field="cc" selected="True" type="Double" size="8" />
+            <SelectField field="Doors" selected="True" type="Double" size="8" />
+            <SelectField field="Cylinders" selected="True" type="Double" size="8" />
+            <SelectField field="Gears" selected="True" type="Double" size="8" />
+            <SelectField field="Quarterly_Tax" selected="True" type="Double" size="8" />
+            <SelectField field="Weight" selected="True" type="Double" size="8" />
+            <SelectField field="Mfr_Guarantee" selected="True" type="Double" size="8" />
+            <SelectField field="BOVAG_Guarantee" selected="True" type="Double" size="8" />
+            <SelectField field="Guarantee_Period" selected="True" type="Double" size="8" />
+            <SelectField field="ABS" selected="True" type="Double" size="8" />
+            <SelectField field="Airbag_1" selected="True" type="Double" size="8" />
+            <SelectField field="Airbag_2" selected="True" type="Double" size="8" />
+            <SelectField field="Airco" selected="True" type="Double" size="8" />
+            <SelectField field="Automatic_airco" selected="True" type="Double" size="8" />
+            <SelectField field="Boardcomputer" selected="True" type="Double" size="8" />
+            <SelectField field="CD_Player" selected="True" type="Double" size="8" />
+            <SelectField field="Central_Lock" selected="True" type="Double" size="8" />
+            <SelectField field="Powered_Windows" selected="True" type="Double" size="8" />
+            <SelectField field="Power_Steering" selected="True" type="Double" size="8" />
+            <SelectField field="Radio" selected="True" type="Double" size="8" />
+            <SelectField field="Mistlamps" selected="True" type="Double" size="8" />
+            <SelectField field="Sport_Model" selected="True" type="Double" size="8" />
+            <SelectField field="Backseat_Divider" selected="True" type="Double" size="8" />
+            <SelectField field="Metallic_Rim" selected="True" type="Double" size="8" />
+            <SelectField field="Radio_cassette" selected="True" type="Double" size="8" />
+            <SelectField field="Tow_Bar" selected="True" type="Double" size="8" />
+            <SelectField field="&gt;85" selected="True" rename="greater than 85" type="Double" size="8" />
+            <SelectField field="69-85" selected="True" rename="between 69 and 85" type="Double" size="8" />
+            <SelectField field="&lt;69" selected="True" rename="less than 69" type="Double" size="8" />
+            <SelectField field="isD4D" selected="True" type="Double" size="8" />
+            <SelectField field="isTERRA" selected="True" type="Double" size="8" />
+            <SelectField field="isSOL" selected="True" type="Double" size="8" />
+            <SelectField field="isVVT" selected="True" type="Double" size="8" />
+            <SelectField field="isSPORT" selected="True" type="Double" size="8" />
+            <SelectField field="isVVTLI" selected="True" type="Double" size="8" />
+            <SelectField field="isCOMFORT" selected="True" type="Double" size="8" />
+            <SelectField field="isLINEA" selected="True" type="Double" size="8" />
+            <SelectField field="isLUNA" selected="True" type="Double" size="8" />
+            <SelectField field="isWAGON" selected="True" type="Double" size="8" />
+            <SelectField field="isLIFT" selected="True" type="Double" size="8" />
+            <SelectField field="isHATCH" selected="True" type="Double" size="8" />
+            <SelectField field="isSEDAN" selected="True" type="Double" size="8" />
+            <SelectField field="*Unknown" selected="True" />
+          </SelectFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+    </Node>
+    <Node ToolID="11">
+      <GuiSettings>
+        <Position x="270" y="6" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Value name="x var">Age_08_04</Value>
+          <Value name="y var">Price</Value>
+          <Value name="y binary">False</Value>
+          <Value name="y level" />
+          <Value name="reg line">True</Value>
+          <Value name="smooth line">True</Value>
+          <Value name="smooth span">50</Value>
+          <Value name="spread">True</Value>
+          <Value name="boxplots">True</Value>
+          <Value name="jitter x">False</Value>
+          <Value name="jitter y">False</Value>
+          <Value name="log x">False</Value>
+          <Value name="log y">False</Value>
+          <Value name="groups">False</Value>
+          <Value name="group var">Id</Value>
+          <Value name="group lines">False</Value>
+          <Value name="default">True</Value>
+          <Value name="topleft">False</Value>
+          <Value name="topright">False</Value>
+          <Value name="bottomleft">False</Value>
+          <Value name="bottomright">False</Value>
+          <Value name="x label" />
+          <Value name="y label" />
+          <Value name="pointsize">10</Value>
+          <Value name="point size">1.0</Value>
+          <Value name="axis text size">1.2</Value>
+          <Value name="axis label size">1.3</Value>
+          <Value name="title size">1.4</Value>
+          <Value name="inches">True</Value>
+          <Value name="in.w">5.50</Value>
+          <Value name="in.h">5.50</Value>
+          <Value name="centimeters">False</Value>
+          <Value name="cm.w">13.00</Value>
+          <Value name="cm.h">14.95</Value>
+          <Value name="graph.resolution">1x</Value>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <Dependencies>
+          <Implicit />
+        </Dependencies>
+      </Properties>
+      <EngineSettings Macro="Predictive Tools\Scatterplot.yxmc" />
+    </Node>
+    <Node ToolID="12">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BrowseV2.BrowseV2">
+        <Position x="390" y="18" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TempFile>C:\Users\vaibh\AppData\Local\Temp\Engine_1163476_f3c7d088b25d4253ade485691b29b8c8_\Engine_80080_9bf934fe75d44fad9c014eedf4be6ee3_.yxdb</TempFile>
+          <TempFileDataProfiling />
+          <Layout>
+            <ViewMode>Single</ViewMode>
+            <ViewSize value="100" />
+            <View1>
+              <DefaultTab>Report</DefaultTab>
+              <Hints>
+                <Table />
+              </Hints>
+            </View1>
+            <View2 />
+          </Layout>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBrowseV2" />
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection>
+      <Origin ToolID="1" Connection="Output" />
+      <Destination ToolID="9" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="2" Connection="Output" />
+      <Destination ToolID="3" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="2" Connection="Correlation Matrix" />
+      <Destination ToolID="4" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="6" Connection="Interactive Report" />
+      <Destination ToolID="7" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="6" Connection="Reports" />
+      <Destination ToolID="8" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="9" Connection="Output" />
+      <Destination ToolID="2" Connection="Data Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="9" Connection="Output" />
+      <Destination ToolID="6" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="9" Connection="Output" />
+      <Destination ToolID="11" Connection="Data Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="11" Connection="Scater Output" />
+      <Destination ToolID="12" Connection="Input" />
+    </Connection>
+  </Connections>
+  <Properties>
+    <Memory default="True" />
+    <GlobalRecordLimit value="0" />
+    <TempFiles default="True" />
+    <Annotation on="True" includeToolName="False" />
+    <ConvErrorLimit value="10" />
+    <ConvErrorLimit_Stop value="False" />
+    <CancelOnError value="False" />
+    <DisableBrowse value="False" />
+    <EnablePerformanceProfiling value="False" />
+    <DisableAllOutput value="False" />
+    <ShowAllMacroMessages value="False" />
+    <ShowConnectionStatusIsOn value="True" />
+    <ShowConnectionStatusOnlyWhenRunning value="True" />
+    <ZoomLevel value="0" />
+    <LayoutType>Horizontal</LayoutType>
+    <MetaInfo>
+      <NameIsFileName value="True" />
+      <Name>New Workflow1</Name>
+      <Description />
+      <RootToolName />
+      <ToolVersion />
+      <ToolInDb value="False" />
+      <CategoryName />
+      <SearchTags />
+      <Author />
+      <Company />
+      <Copyright />
+      <DescriptionLink actual="" displayed="" />
+      <Example>
+        <Description />
+        <File />
+      </Example>
+    </MetaInfo>
+    <Events>
+      <Enabled value="True" />
+    </Events>
+  </Properties>
+</AlteryxDocument>
