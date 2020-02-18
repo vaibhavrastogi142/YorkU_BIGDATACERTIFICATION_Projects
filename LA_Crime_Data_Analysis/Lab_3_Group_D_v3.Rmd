@@ -1,0 +1,1671 @@
+---
+title: 'Lab 3: L.A. crime hotspots'
+author: 'Vaibhav Rastogi'
+date: "TBC, 2019"
+output:
+  pdf_document:
+    df_print: paged
+    highlight: tango
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, prompt = TRUE)
+library(Hmisc)
+library(Rmisc)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(lubridate)
+library(tidyverse) 
+```
+
+
+*for mapping (not used, but for future reference)*
+```{r}
+# install.packages("devtools")
+# install.packages("stringr")
+# library(devtools)
+# library(stringr)
+# install.packages(c("maps", "mapdata"))
+# devtools::install_github("dkahle/ggmap")
+# library(maps)
+# library(mapdata)
+```
+
+*In case we need later (these are packages we used for our modelling in Lab 2):*
+```{r}
+# library(rpart)   
+# library(rpart.plot)
+# library(caret)
+# library(pROC)
+# library(e1071)
+# library(randomForest)
+# library(pscl)
+```
+
+\newpage  
+# Abstract
+The Los Angeles Police District (LAPD) aims to protect and serve the 4M people of Los Angeles (L.A.).  As part of their commitment to transparency and continual improvement, the City publishes crime and arrest data from 2010 to present (updated weekly) on Kaggle to encourage public dialogue.  Place-based policing is gaining traction as an effective and efficient means to fight and prevent crime, broadening practice from a traditional policing focus on arresting the bad guy.  
+
+In this short study, we look to see what clustering techniques can tell us about crime patterns in L.A..  We are seeking to identify clusters of low, medium, and high risk crime areas and districts in L.A., and to understand the differences between these areas - for example in the prevalence of crime types and victim profiles.  We attempt to use different clustering techniques (dendogram and K-means), scopes (area vs district-level), time periods (2010 to present vs just 2017 which had the highest crime rate) and characteristics (e.g., crime types) for our analysis.
+
+Our K-means clustering analysis was able to identify four clusters where the differences in crime volume by location that were stable over time.  That is, areas of high, medium-high, medium-low, and low crime in L.A..  While our study identifies differences between clusters by crime volume, there were fewer differences than we expected to see between these clusters based on other characteristics (such as crime types and victim and offender socio-economic characteristics) that might help to target police practices and victim services.  This suggest our clusters would need further refinement to become deployable in targeting services.  Our findings nevertheless support the concept of place-based policing - as the most significant differences we identified through our clustering analysis were between locations (by volume).  This is a complex and rich data set, and we view that clustering techniques, with further time to explore different avenues including differences between patterns for crimes vs arrests datasets that surfaced in our exploratory analysis would provide additional insight.   
+
+\newpage
+# Business understanding
+
+## Determine business objectives
+**Background**  
+The Los Angeles Police District (LAPD) has a force of 10,000 sworn officers policing the City of Los Angeles (4M).  The LAPD's mission is "to safeguard the lives and property of the people we serve, to reduce the incidence and fear of crime, and to enhance public safety."  Simply put, the LAPD motto is "To Protect and To Serve."  Historically, police practices have tended to focus on "identifying offenders who commit crimes, and end with the arrests of those offenders and their processing through the criminal justice system."  But there is a growing body of evidence supporting both the effectiveness and efficiency of **place-based policing.**  "Police throughout the country have begun to focus in on crime hot spots and ... crime mapping has become a central feature of cutting-edge law enforcement." (Weisburd, 2008) 
+
+**Objectives**   
+As part of the LAPD's commitment to service, they have committed to "the highest standards of integrity and transparency," which includes being forthcoming about statistical data.  As such, the City of Los Angeles publishes crime and arrest data from 2010 to present (updated weekly) on Kaggle. This reflects a "core value of quality through continuous improvement," and encourages public dialogue about patterns of crime and police activity. We explored both crime (1.96M records) and arrest (1.25M records) datasets as at 19 April 2019.  Our objective is to build on this public dialogue by investigating what clustering techniques can tell us about crime patterns in L.A..  In particular, we are seeking to identify clusters of low, medium, and high risk crime areas and districts in L.A. and look at differences between these areas - for example in the prevalence of crime types, and victim profiles.  Understanding these patterns could inform subsequent analysis to map service offerings and identify gaps between need and avaiable services by location.  This could apply to victim services (e.g., sensitive to gender and ethnicity), specialized police services (e.g., responsive to different crime types), health services, and/or crime prevention activities.
+
+**Success criteria**  
+A succesful outcome of this study would be insights into what distinguishes higher and and lower crime neighbourhooods, to bring a new perspective to an ongoing dialogue about crime patterns. We would hope to see a meaningful difference between profiles of each cluster.  
+  
+
+## Assess situation
+
+**Resources and constraints**  
+As with Lab 2, we are learning R,living in different cities, and working within a tight time constraint.  However, we are building on our experience through completion of Labs 1 and 2 and developing experience in how to manage our workflow, and working with our new tools and skills.  We continue to rely on the diversity of our team, which inludes a policy analyst to help with our understanding of business need, an experienced programmer to help those of us learning to code, an engineer to help those of us learning to model, and a continued commitment by team members to work hard to learn new skills.  
+
+We are working on home computers primarily with R Studio and R Markdown, and drawing on internet packages and trouble-shooting strategies available to us through the R user community, and course materials.  A significant challenges has been that the size of this data set leads to lengthy run times and computer memory challenges.
+
+
+**Assumptions, risks and contingencies**  
+This data set is accompanied by comprehensive explanatory notes, minimizing the need to make assumptions and also lowering risks.  That said, given the constraint of time above, there are risks of scope creep that could present challenges in completing the assignment within the time frame allowed.  The data set invites ambition and opens on to endless possibilities we are curious to explore.  However our two week timeline and competing commitments (which have included moving into a new home, having a root canal, parenting children, and preparing for a Prime Ministerial meeting) limit what is achievable. To mitigate these risks, we will manage down our scope.  As an example, the existence of the two data sets makes us curious about the potential for compariss between them, and/or linkages between them based on summary data by area or district, while the regional question we are exploring invites visualization by maps.  We will note these possibilities as areas for potential follow up, but exclude them from scope in light of time constraints.  Also, while both are included in our exploratory analysis, we will limit our modelling to the crime data set.
+
+## Produce project plan
+Our approach follows the **CRoss-Industry Standard Process for Data Mining (CRISP-DM)** standard process model:
+
+1. **Business understanding**:  we identify a relevant business objective (crime prevention) and convert it to an analytics question: *what patterns emerge from the data that associated with crime hot spots?*
+2. **Data understanding**:  we explore data available to us to understand this problem; *which explanatory variables exist that could tell us more about what is driving high rates of crime in certain locations*? 
+3. **Data preparation**:  we clean the data, and conduct *principal component analysis (PCA)* to reduce dimensions to the most relevant predictors
+4. **Modelling**:  we apply clustering techniques; here *hierachical clustering (dendogram)* and *K-means clustering* to understand the problem. 
+5. **Evaluation**:  we test the effectiveness of our model as a tool to understand the problem: *cluster validation* (k-means, k-centroid, neural gas), *distance comparison* and *external validation*
+6. **Deployment**:  we consider how our models could be used to achieve the business objective: *can a better understanding of drivers of crime in certain locations help to respond and prevent crime?*
+
+As we gain familiarity with new techniques and tools, we are at the same time working on a shorter schedule to generate results.  We will continue to work collaboratively, assign tasks and hand-off sequencing more clearly than in our earlier project with the benefit of hindsight.  We will also continue to draw on our relative strengths for coaching and our willingness to learn.
+
+**Initial assessment of tools and techniques**  
+After reviewing exploratory analysis of the data together, we determined that we would *attempt hierachical clustering (dendogram) and K-means clustering approaches for this analysis*.  Packages used for this work are listed in the header or our RMD file.  We have learned subtantially from our R Markdown workflow challenges in the previous assignment, and are more confident using and sharing R Markdown as a collaborative tool. As a lesson learned, we will introduce naming conventions to minimize trouble-shooting required at each hand-off.  
+
+\newpage
+# Data understanding, exploratory analysis and preparation
+
+## Arrest data
+### Collect initial data 
+The **datasets** we used were downloaded from Kaggle <https://www.kaggle.com/cityofLA/los-angeles-crime-arrest-data>.  This is administrative data collected by the Los Angeles Police District (LAPD) and made publicly available by the City of Los Angeles.  The first dataset we explore is arrest-data-from-2010-to-present.  However, our modelling will focus on a second dataset crime-data-from-2010-to-present.  We have determined that while there are unique identifies by arrest, and unique identifiers by crime, there is unfortunately no key in the publicly-available datasets that would allow us to join these two datasets. We are aware of, but have not covered probabilistic linkage strategies in our course materials to date.  We have also determined, as discussed earlier in our assessment of constraints and risks, that we will include both datasets in our initial exploratory analysis, but limit our modelling efforts to the more comprehensive crime data set, which better aligns with our business need to identify where crime is occurring.
+
+We have increased our degree of difficulty from a data standpoint relative to Lab 2, where the data was was compiled specifically for data mining.  This data set will require more preparation.
+
+```{r read arrests}
+arrestfilename <- "arrest-data-from-2010-to-present.csv"
+arrestdf <- read.csv(arrestfilename)
+```   
+
+### Describe arrest data
+The arrest dataset contains 1.25 million individual records from 2010 to present, and is updated periodically.  We are usinge version 44, updated on 19 April, 2019.
+
+```{r}
+str(arrestdf) 
+```   
+
+There are columns with integers, but these are actually descriptive rater than numerical (e.g., report ID, reporting district, age).  There are multiple factors, and there are also geographical coordinates.
+There are `r ncol(arrestdf)` columns and `r nrow(arrestdf)` rows in the dataset.
+  
+\newpage  
+  
+Here is a sample of the data in the dataset.
+```{r}
+select(arrestdf, Report.ID, Arrest.Date, Time) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(arrestdf, Area.ID, Area.Name, Reporting.District, Address, Cross.Street, Location) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(arrestdf, Age, Sex.Code, Descent.Code) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(arrestdf, Arrest.Type.Code, Charge, Charge.Description) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+```   
+
+Explanatory notes provided along with the data help us to interpret these fields.  We will comment on the notes available to us for each field as we examine it.  The remainder of this section describes our exploratory analysis of this data set.
+
+
+\newpage
+  
+### Arrest locations
+
+Given that our interest is in understanding crime hot spots and geographical differences, we'll start by getting a better picture of the geographical data by understanding the unique values in each of the fields.
+
+```{r describe arrest Area.ID}
+sort(unique(arrestdf$Area.ID))
+```   
+
+This shows that there are 21 Area ID values for the target variable.
+
+Now let's see if the Area.Name field has the same number of values, in which case they are likely related.
+
+```{r describe arrest Area.Name}
+sort(unique(arrestdf$Area.Name))
+``` 
+Indeed, there are 21 levels suggesting the Areas.Names correspond to the Area.IDs.  We should confirm this in the data dictionary, but also make a mental note we will need to eliminate one of these fields in our data preparation so they are not mistakenly treated as similar in our clustering model if they are in fact the same.  This would distort the analysis.
+
+Now, let's see how Reporting.District relates to areas.  Are there more or less?
+
+```{r describe arrest Reporting.District}
+sort(unique(arrestdf$Reporting.District))
+``` 
+
+There are many more, 1649, which means that Reporting.District is more granular; likely a sub-category of Area.  Referring to the explanatory notes confirms that RD is a sub-set of Area, and provides a link to a map of these sub-districts: http://geohub.lacity.org/datasets/lapd-reporting-districts.  This link provides shape files for the sub-districts which means that if time and our capability had allowed, we could have mapped our data visually.
+
+There is also a note to follow up when we test data quality: "omitted 348 entries."  Are these null values?  We will also need to consider in our data prep how we treat these values, assuming they are a sub-group of Area.  We may wish to conduct our modelling twice; once using the broader Area field, then again using the more granular District.ID code.
+
+But first, we want to understand which areas have higher and lower volumes of arrests, so we need to group by location to count unique events.  Let's start with the larger geography, Area.ID.
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Area.ID))
+```
+
+This shows that Area 1 had the highest total arrest count, followed by area 6, then 14.  Area 8 had the lowest arrest count, followed by area 7, and either 10, 17, or 4.  It's hard to tell for sure.  Let's build a table showing counts by Area.Name. 
+
+```{r}
+arrestdf %>%
+  group_by(Area.Name) %>%
+  summarise(Number = n())
+```
+
+Now, let's replicate the same analysis for Reporting.District.  
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Reporting.District))
+```
+
+There are clearly significant levels of variation in arrests by reporting district.  Let's check out the counts.  Also the scale of the image suggests the possibility of outliers, though they aren't visible in this plot.
+
+```{r}
+arrestdf %>%
+  group_by(Reporting.District) %>%
+  summarise(Number = n())
+```
+
+We have a few other fields that will give us really granular data about the location of arrests: Address, Cross.Street, and Location.  It would be really interesting to map these granular data.  But for the time being we're going to move on to crime types.
+
+### Arrests by Crime type
+
+Let's look at some of the other arrest characteristics, beginning with crime types.  How many different Charge.Group.Code values are there?
+
+```{r describe arrest Charge.Group.Code}
+sort(unique(arrestdf$Charge.Group.Code))
+```  
+
+It looks like there are 28, but what's going on with codes 28, 29, and 99?  28 appears to be missing, and is 99 an error?
+
+Are there the same number of these as in the Charge.Group.Description field?
+
+```{r describe arrest Charge.Group.Description}
+sort(unique(arrestdf$Charge.Group.Description))
+```  
+There are 28 levels of Charge.Group.Descriptions - we'll need to check the data to see if 29 and an 99 are errors; it seems likely that the charge codes correspond with the charge descriptions, which bring up the same issues we identified earlier with area codes; we'll need to eliminate one of these fields for our modelling.  Explanatory notes confirm that the descriptions should define the codes, and also note the potential for data entry errors - so we need to remove the outliers here.
+
+So which charges happen most often?
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Charge.Group.Code))
+```
+That 99 code sure looks like a data entry error based on this graph.  Also note the error message: 
+"Removed 68477 rows containing non-finite values (stat_count)."
+
+Let's look at the Charge.Group.Description field.
+```{r}
+arrestdf %>%
+  group_by(Charge.Group.Description) %>%
+  summarise(Number = n())
+```
+
+What else do we know about the nature of the crimes?  There are three other potentially relevant fields: Arrest.Type.Code, Charge, and Charge.Description.  Are Charge and Charge.Description related?
+
+```{r describe arrest Charge}
+sort(unique(arrestdf$Charge))
+```  
+There are 7676 levels of this field, so clearly more granular than the Charge.Group code; not really surprising, given the name.  But note the decimal places, and letter codes - this suggests there are sub-groupings within this data.  In preparing the data set for analysis, it may be worth eliminating these sub-codes.
+
+Which of these happen the most frequently?
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Charge))
+```
+
+That's pretty messy!  It's hard to make any sense out of this plot, and the high count number suggest some outliers.  
+
+But let's look at the descriptions of the charges.
+
+```{r describe arrest Charge.Description}
+sort(unique(arrestdf$Charge.Description))
+```  
+
+There are 2196 levels of this field, far fewer than the 7676 in the previous field - this supports the idea that there are sub-codes.  And on a side note, the nature of the charges is extremely diverse!
+
+```{r describe Arrest.Type.Code}
+sort(unique(arrestdf$Arrest.Type.Code))
+```  
+
+There appear to be very view levels of arrest types.  Indeed, the explanatory notes provide the following context: 
+D - Dependent F - Felony I - Infraction M - Misdemeanor O - Other.  
+
+These are very high level groupings; they could be helpful for cross-tab analysis. It's interesting to note the different levels of hierarchy built into the data.  We'll need to consider how to deal with these hierarchies for our cluster analysis.  Perhaps one strategy would be to run a first model with higher order characteristics (e.g., Arrest.Type.Code, Area) that eliminates the second order characteristics (e.g., Charge.Group.Code, and Reporting.District).  Then we could do the reverse run the same modelling technique with the second order characteristics.  I'm not sure how we would deal with the more granular detail using this approach.
+
+Returning to our exploratory analysis, let's see how the Arrest.Type.Codes compare in terms of frequency.
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Arrest.Type.Code))
+```
+
+### Socio-economic chracteristics of offenders
+
+We have three values that provide information about offenders who are arrested: age, Sex.Code, and Descent.Code.  There are only two unique values for sex, and many for age, so let's start by interrogating the Descent.Code, which likely deals with ethnicity.
+
+```{r describe arrest Descent.Code}
+sort(unique(arrestdf$Descent.Code))
+```  
+We'll need to refer to the data dictionary to make sense of this.
+
+But what is the freqency by category?
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Descent.Code))
+```
+
+It seems like most of these codes represent ethnicities that are less likely to offend, or at least to be arrested.  There are only four categories that have a meaningful crime count.  The explanatory notes show that these are: Hispanic/Latin/Mexican (H), (Black) B, White (W), and Other (O).
+
+We're beginning to get into potentially risky territory here from an ethical standpoint.  First of all, to make sense of these findings we'd need to know something about the distribution of these different ethnicities.  There are obviously more people of hispanic descent in L.A. than Samoan or Guamanian.  Moreover, ethnicity can be somewhat subjective to identify, and these codes are likely entered by police officers based on their perception; this would explain the high incidence of the Other code.  Socio-economic marginalization can be a driver of offending, and there are historical reasons for racialized social inequities. Moreover, patterns of racial bias in policing practices are well-documented, and it is more likely for crimes to occur where the police presence is more intensive, often in ethnic enclaves.  Nevertheless, ethnicity data can help to build a portrait of what is driving arrests that is useful for policy-making; such as to assess whether there is bias.  So we will proceed with caution, and caveat any findings in relation to these uncertainties.
+
+Here's the same information in table form.
+
+Descent Code: A - Other Asian B - Black C - Chinese D - Cambodian F - Filipino G - Guamanian H - Hispanic/Latin/Mexican I - American Indian/Alaskan Native J - Japanese K - Korean L - Laotian O - Other P - Pacific Islander S - Samoan U - Hawaiian V - Vietnamese W - White X - Unknown Z - Asian Indian
+
+```{r}
+arrestdf %>%
+  group_by(Descent.Code) %>%
+  summarise(Number = n())
+```
+
+Now let's have a look at arrests in L.A. by gender.
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Sex.Code))
+```
+
+No big surprise there, men are far more likely to be arrested than women.  
+
+```{r}
+arrestdf %>%
+  group_by(Sex.Code) %>%
+  summarise(Number = n())
+```
+
+Now let's turn to age. 
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Age))
+```
+
+There are definitely some strong patterns in arrests by age.  Children and elderly people aged 75 and older are unlikely to offend - but somehow the dataset captures offending from ages 0 to 100.  This is worth looking into in terms of data quality.  There is a clear spike from the teens growing to the early twenties, and then a steady downward trend from then on, plateauing through the forties before quickly tapering off again past age 50. This is consistent with literature about offending.  
+
+We'll need to think about how to represent age as a continuous variable, compared to the categorical values we've discusse so far.  Should it be binned into age groups for comparability?
+
+### Arrest Time Data
+
+We have two variables to help us understand when people are being arrested; Arrest.Date and Time.  We can use these in different ways; to look at trends over time, and also to look at patterns like seasonal variation, and what times of day crimes are most likely to occur.  Given the Arrest.Date format is "2010-01-01T00:00:00", the first will take some data manipulation, so let's start with the second.
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Time))
+```
+
+This shows that arrests are most likely to happen from the late afternoon to midnight.  While the spiky patterns in the data likely relate to a tendency to round reporting times, there are clear high points at at around 4:15 in the afternoon, around 7:15 in the evening, and around 11:00 at night.  Also note the error message: 	"Removed 182 rows containing non-finite values (stat_count)."  There may be a lag time between crimes occurring, being reported and the arrests being made; so this field may not be as meaningful as the time when crimes are committed and reported which are available in our second dataset.  It's also worth noting that these arrest time patterns are likely influenced by factors like policing shifts.
+
+Now let's split the date field to set up a time series, first by year.
+
+```{r}
+# separate(data = arrestdf, col = "Arrest.Date", into = c("Year", "Month", "Day"))
+arrestdf$Arrest.Date <- as.Date(arrestdf$Arrest.Date)
+arrestdf$Arrest.Year <- year(arrestdf$Arrest.Date)
+arrestdf$Arrest.Month <- month(arrestdf$Arrest.Date)
+arrestdf$Arrest.Day <- day(arrestdf$Arrest.Date)
+```
+
+### Multi-factorial analysis of arrests  
+Now's let's bring some of the factors together; for example, which arrest types are most common by area?
+
+```{r}
+arrestdf %>%
+  group_by(Area.Name, Arrest.Type.Code) %>%
+  summarise(number = n())
+```
+
+Here is the information as a stacked bar chart, so it's easier to interpret.  
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Area.ID, fill = Arrest.Type.Code))
+```
+
+We tried with the more granular Charge.Group.Code, but it appears to have too many sub-categories.
+
+So, what is the gender split for different arrest types?
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Arrest.Type.Code, fill = Sex.Code))
+```
+
+Another reminder this data needs some cleaning - there are more sex.codes for victims than for offenders.  
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Charge.Group.Code, fill = Sex.Code))
+```
+
+What does the distribution by ethnicity look like within the higher level Arrest.Type.Code categories?
+
+```{r}
+ggplot(data = arrestdf) +
+  geom_bar(mapping = aes(x = Arrest.Type.Code, fill = Descent.Code))
+```
+
+\newpage
+## Crime Data
+### Collect additional data 
+As noted earlier, there is a separate **dataset** available from Kaggle <https://www.kaggle.com/cityofLA/los-angeles-crime-arrest-data> providing a more complete view of crimes, including victimization, than the arrests datasets.  We will explore this dataset now, which will be the focus of the remainder of our modelling. 
+
+```{r read crimes}
+crimefilename <- "crime-data-from-2010-to-present.csv"
+crimedf <- read.csv(crimefilename)
+```   
+
+### Describe crime data
+The arrest dataset contains 1.96 million individual records from 2010 to present, and is updated periodically.  We are using version 44, updated on 19 April, 2019.  There are more crimes than arrests, reflecting that not all crimes are solved.  There is likely a business reason why joins between these two datsets are not facilitated.
+
+```{r}
+str(crimedf) 
+```   
+
+Again, there are columns with integers, but these are actually descriptive rater than numerical (e.g., report ID, reporting district, age).  The geographical coordinates appear to align with our analysis of the arrests data, which would be important if we wanted to use both datasets to look at crime types.  There are a numbe of crime codes, and these do not appear to align with the arrest costs in the other data set; we will investigate whether these codes are also a nested hierarchy.  There is new information in the data fields here about victims and weapons.
+
+There are `r ncol(crimedf)` columns and `r nrow(crimedf)` rows in the dataset.
+  
+\newpage  
+  
+Here is a sample of the data in the dataset.
+```{r}
+select(crimedf, DR.Number, Date.Reported, Date.Occurred, Time.Occurred) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(crimedf, Area.ID, Area.Name, Reporting.District, Address, Cross.Street, Location) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(crimedf, Premise.Code, Premise.Description, Weapon.Used.Code, Weapon.Description) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(crimedf, Victim.Age, Victim.Sex, Victim.Descent) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(crimedf, Crime.Code, Crime.Code.Description, Crime.Code.2, Crime.Code.3, Crime.Code.4) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+select(crimedf, Status.Code, Status.Description) %>% head() %>% kable() %>% kable_styling(font_size = 7)
+```   
+
+\newpage
+  
+### Crime locations
+
+We've looked at arrest locations; but what we really want to know to understand crime hot spots is where crime is actually taking place. Let's check if these are the same Areas as in the arrest data.
+
+```{r describe crime Area.ID}
+sort(unique(crimedf$Area.ID))
+```   
+
+Yes, this dataset also as 21 Area ID values.  Based on the explanatory notes, we'll assume these are the same Areas and Reporting Districts.
+
+Now let's see if the Area.Name field has the same number of values, in which case they are likely related.
+
+Now let's look at were crime is most likely to occur, once again starting with the largest geographical category in the hierarchical dataset, Area.ID.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Area.ID))
+```
+
+It is interesting to compare this to patterns for arrests, which we looked at in the previous data sets.  The areas where crime occur are spread much more evenly across the city compared to the areas where arrests happen.
+
+Let's build a table showing counts by Area.Name.  
+
+```{r}
+crimedf %>%
+  group_by(Area.Name) %>%
+  summarise(Number = n())
+```
+
+Now, let's replicate the same analysis for Reporting.District.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Reporting.District))
+```
+
+As with arrests, there is significant levels of variation in the volume of crime by reporting district.  Let's check out the counts.  
+
+```{r}
+crimedf %>%
+  group_by(Reporting.District) %>%
+  summarise(Number = n())
+```
+
+As with arrests, we have a few other fields that will give us really granular data about the location of arrests: Address, Cross.Street, and Location and it would be nice to be able to map these granular data.  
+
+### Crimes by type
+
+ Crime.Code            : int  668 668 626 812 810 946 354 122 442 330 ...
+ $ Crime.Code.Description
+
+Now let's mirror our analysis of the arrest characteristics, beginning with crime types.  How many different Crime.Code values are there?
+
+```{r describe Crime.Code}
+sort(unique(crimedf$Crime.Code))
+```  
+
+There are a lot - 956.  What is the relationship between the different Crime.Code fields?  First of all, which one seems to line up with the Crime.Code.Description?
+
+```{r describe Crime.Code.Description}
+sort(unique(crimedf$Crime.Code.Description))
+```  
+
+There are 136 levels. So let's keep exploring the Crime.Code levels to see which field likely corresponds.
+
+```{r describe Crime.Code.1}
+sort(unique(crimedf$Crime.Code.1))
+``` 
+
+There are 137, so similar to the descriptions.  A few more than Crime.Code, 999.  
+
+```{r describe Crime.Code.2}
+sort(unique(crimedf$Crime.Code.2))
+``` 
+
+999 again.  We'll need to check the explanatory notes.
+
+```{r describe Crime.Code.3}
+sort(unique(crimedf$Crime.Code.3))
+``` 
+
+The numbers seem to go up to 999 but not all are used.
+
+```{r describe Crime.Code.4}
+sort(unique(crimedf$Crime.Code.4))
+``` 
+
+Let's have a look the Crime.Code.Description field.
+
+```{r}
+crimedf %>%
+  group_by(Crime.Code.Description) %>%
+  summarise(Number = n())
+```
+
+Which crimes happen most often?
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Crime.Code.Description))
+```
+
+We'll need to work on our labelling and data understanding a bit more to understand this.
+
+There is some current status information here that wasn't in the arrest data: Status.Code and Status.Description.  Are these related?
+
+```{r describe crime Status.Code}
+sort(unique(crimedf$Status.Code))
+``` 
+
+```{r describe crime Status.Description}
+sort(unique(crimedf$Status.Description))
+```  
+
+Presumably the arrests data set captures the subset of these incidents in the 'Adult Arrest' and Juv Arrest' groups.
+
+What proportion of crimes result in arrests?
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Status.Code))
+```
+
+The vast majority remain under investigation. It would be nice to have a higher order category of crime types to create some cross-tabs.
+
+### Socio-economic chracteristics of victims
+
+As with offenders who are arrested, we have three values that provide information about victims of crime: Victim.Age, Victim.Sex and Victim.Descent. Let's confirm that the ethnicty data is constructed in the same way. 
+
+```{r describe crime Victim.Descent}
+sort(unique(crimedf$Victim.Descent))
+```  
+
+Yes - looks the same.  
+
+What is the freqency by category?
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Descent))
+```
+
+The differences are quite interesting.  Both victims and offenders (who are arrested) are most likely to be Hispanic/Latin/Mexican (H), but the White (W) ethnic group replaces Black (B) as second-most likely to be victims.  The other category again follows, but there are also a lot of null values.  We already noted ethical considerations around analysis of racialized crime data, and also that you would need to have a baseline distribution of the general population to make sense of these trends. 
+
+Here's the same information in table form.
+
+```{r}
+crimedf %>%
+  group_by(Victim.Descent) %>%
+  summarise(Number = n())
+```
+
+Now let's have a look at victims of crime in L.A. by gender.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Sex))
+```
+
+The gender split is really different here from offenders, who were more likely to be male.  Women are nearly, but not quite as likely as men to be victims of crime in L.A..  Note also the extra fields - potentially need to be cleaned up.
+
+Now let's look at age. 
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Age))
+```
+
+omething odd happening in the 0 age category which we'll need to sort out to interpret this. It could be that many crimes are victimless, or the victim is unknown.
+
+### Crime Time Data
+
+We have one two variables to help us understand when crimes are occurring (Date.Occurred, Time.Occurred), and a third (Date.Reported) to help us understand when victims are reporting crimes.  Let's start with when crimes are occurring.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Time.Occurred))
+```
+That's surprising - apparently lunchtime is prime crime time!  I would have expected more crimes to occur overnight.
+
+### Multi-factorial analysis of crimes by current status
+
+Which crimes are most likely to result in arrests?
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Area.ID, fill = Status.Code))
+```
+
+No obvious trends, though there are differences between areas in terms of the proportion of incidents leading to adult arrests (AA), adult other (AO), juvenile arrests (JA), and juvenile other (JO) - and the vast majority of incidents across all areas remain under investigation, suggesting most crimes are not leading to arrests.
+
+We can take a similar approach to looking a current status of crimes by victim type.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Descent, fill = Status.Code))
+```
+Again, no clear patterns emerge - suggesting there is no clear bias in how the LAPD pursue arrests based on the ethnicity of victims, which is a positive result.
+
+Let's try the same approach, but based on Victim.Sex.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Sex, fill = Status.Code))
+```
+
+Here there is more of a trend - crimes with female victims are more likely to lead to arrests.
+
+Finally, let's look at age.
+
+```{r}
+ggplot(data = crimedf) +
+  geom_bar(mapping = aes(x = Victim.Age, fill = Status.Code))
+```
+
+It appears that crimes where a teen was the victim are more likely to result in juvenile arrests (JA) or juvenile other (JO); and that the patterns of arrest otherwise relate to the frequency of incidence, with more arrests associated with crimes that victimize young and working age adults.
+
+\newpage 
+## Verify data quality
+**Are there any missing values?**   
+```{r missing_values}
+colSums(is.na(crimedf)) %>% kable()
+```   
+  
+There are missing values in the following categories: Premise.Code (38), Weapon.Used.Code (699357), Crime.Code.1 (6), Crime.Code.2 (983251), Crime.Code.3(1047444), Crime.Code.4(1048536). Given that the majority of records for Crime.Codes 2-4 are missing, and that the higher-order Crime.Code.1 category has just 6 missing values, we recommend removing all but Crime.Code.1, imputing the 6 missing values for Crime.Code.1 with median values, and similarly imputing missing values for the 38 missing Premise.Code.
+
+## Data Preparation
+
+Let's narrow down our massive data set to make it more manageable.  Recall the date format is "2010-01-01T00:00:00".  In order to work with our date field for this technique, we will convert it into years.  In our next phases of modelling we will look at dates differently, but this will simplify our data set for the time being.  We'll start by converting the data field to a format we can work with more easily.
+
+```{r}
+crimedf$year_occurred <- year(as.Date(crimedf$Date.Occurred,format='%Y-%m-%d'))
+str(crimedf)
+```
+
+And now we'll convert year to a factor
+
+```{r}
+crimedf$year_occurred <- as.factor(crimedf$year_occurred)
+str(crimedf)
+```
+
+Now, let's look at total crime by year
+
+```{r}
+group_by(crimedf, year_occurred) %>% summarise(n = n())
+```
+
+We note that 2017 has the highes number of crimes, we're going to filter for just 2017 crimes for our first modelling exercise.
+
+```{r}
+crime2017df <- crimedf[crimedf$year_occurred == 2017, ]
+# view(crime2017df)
+```
+
+Now we'll remove the columns we don't need for this first modelling exercise.
+
+```{r}
+crime2017df1 <- crime2017df[-c(1:5,  7:8, 10:26)]
+# view(crime2017df1)
+```
+
+# Modelling
+
+## Hierarchical Clustering (Dendogram)
+
+### By Area
+
+Our first modelling step will be to attempt a hierarchical clustering approach, building a dendogram.  The dendogram groups like pairs, then pairs of pairs and visually displays the difference between these pairs as 'height'.  
+
+**Grouping**  
+```{r}
+by_group <- group_by(crime2017df1, Crime.Code.Description, Area.Name)
+groups <- summarise(by_group, n=n())
+groups <- groups[c("Area.Name", "Crime.Code.Description", "n")]
+groups_wide <- spread(groups, key = Crime.Code.Description, value = n)
+# view(groups_wide)
+```
+
+**Replace NA with 0**  
+```{r}
+groups_wide[is.na(groups_wide)] <- 0
+# view(groups_wide)
+crime2017df2 <- groups_wide[, -c(1,1)]
+# view(crime2017df2)
+```
+
+**Validate no missing values**  
+```{r}
+colSums(is.na(crime2017df2))
+
+m <- apply(crime2017df2, 2, mean)
+s <- apply(crime2017df2, 2, sd)
+crime2017df2 <- scale(crime2017df2, m, s)
+```
+
+**HCluster**  
+```{r}
+crime2017df2 <- data.frame(crime2017df2)
+distance <- dist(crime2017df2)
+hc <- hclust(distance)
+plot(hc, labels = groups_wide$Area.Name, main='Dendrogram', cex=0.80)
+```
+
+**Do we need to extract clusters?**  
+groups <- cutree(h_clust,k=4)
+groups
+
+
+### By District
+
+**Remove columns we don't need**  
+```{r}
+crime2017df1 <- crime2017df[-c(1:6, 8, 10:26)]
+# view(crime2017df1)
+```
+
+**Grouping**  
+```{r}
+by_group <- group_by(crime2017df1, Crime.Code.Description, Reporting.District)
+groups <- summarise(by_group, n=n())
+groups <- groups[c("Reporting.District", "Crime.Code.Description", "n")]
+groups_wide <- spread(groups, key = Crime.Code.Description, value = n)
+# view(groups_wide)
+```
+
+**Replace NA with 0**  
+```{r}
+groups_wide[is.na(groups_wide)] <- 0
+# view(groups_wide)
+crime2017df2 <- groups_wide[, -c(1,1)]
+# view(crime2017df2)
+```
+
+**Validate no missing values**  
+```{r}
+colSums(is.na(crime2017df2))
+
+m <- apply(crime2017df2, 2, mean)
+s <- apply(crime2017df2, 2, sd)
+crime2017df2 <- scale(crime2017df2, m, s)
+```
+
+**HCluster**  
+```{r}
+crime2017df2 <- data.frame(crime2017df2)
+distance <- dist(crime2017df2)
+hc <- hclust(distance)
+plot(hc, labels = groups_wide$Reporting.District, main='Dendrogram', cex=0.80)
+```
+
+**Do we need to extract clusters?**  
+groups <- cutree(h_clust,k=4)
+groups
+
+## K-Means Clustering
+
+### by Area and Month Year
+
+Let's start by looking at number of crimes over time.
+
+**Start by exploding Year.Month**  
+
+```{r}
+crimedf2 <- crimedf %>% filter(year(Date.Occurred)<2019|month(Date.Occurred)<4) %>%
+  mutate(Year.Month = substr(as.character(Date.Occurred),1,7)) %>%
+  select (Area.Name, Year.Month) %>% 
+  group_by(Area.Name, Year.Month) %>% summarize(n=n()) %>%
+  spread(key = Year.Month, value = n, fill = 0)
+
+```
+
+After exploding the Year.Month and summing by Area Name we now have `r ncol(crimedf2)` columns and `r nrow(crimedf2)` rows
+
+**Run PCA on dataset containing Year.Months and sums by Area**     
+
+```{r}
+crimedf2[is.na(crimedf2)] <- 0
+
+# colSums(is.na(crimedf2))
+
+crimedf2$Area.Name = as.character(crimedf2$Area.Name)
+crimedf2 <- crimedf2 %>%
+     remove_rownames() %>%
+     column_to_rownames(var = 'Area.Name')
+
+# head(crimedf2)
+
+PCAcrime <- prcomp(crimedf2, scale. = TRUE)
+# PCAcrime
+
+```
+
+**Histogram of the PCs**  
+
+```{r fig.height=3, fig.width=3}
+plot(PCAcrime)
+```
+
+We observe that *most of the information is in the first 2 PCs.*
+
+Let's do a scatterplot the first 2 PCs  
+
+```{r fig.height=2.5, fig.width=3}
+PCAcrimedf <- as.data.frame(PCAcrime$x)
+
+ggplot(data=PCAcrimedf,mapping=aes(PC2,PC1)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Month Year") +
+  theme(text = element_text(size=8))
+
+```
+
+#### Clustering  
+
+**Run kmeans on PCs, start with 3 centers, plot**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster3_PCAcrimedf <- kmeans(PCAcrimedf, centers = 3)
+crimedf2$cluster3 <- as.factor(cluster3_PCAcrimedf$cluster)
+
+ggplot(data=PCAcrimedf,mapping=aes(x=PC2,y=PC1,color=crimedf2$cluster3)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Month Year") +
+  theme(text = element_text(size=8))
+
+
+crimedf2 %>% group_by(cluster3) %>% summarize(Count=n())
+
+```
+
+**Try 4 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster4_PCAcrimedf <- kmeans(PCAcrimedf, centers = 4)
+crimedf2$cluster4 <- as.factor(cluster4_PCAcrimedf$cluster)
+
+ggplot(data=PCAcrimedf,mapping=aes(x=PC2,y=PC1,color=crimedf2$cluster4)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Month Year") +
+  theme(text = element_text(size=8))
+
+
+crimedf2 %>% group_by(cluster4) %>% summarize(Count=n())
+
+```
+
+**Try 5 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster5_PCAcrimedf <- kmeans(PCAcrimedf, centers = 5)
+crimedf2$cluster5 <- as.factor(cluster5_PCAcrimedf$cluster)
+
+ggplot(data=PCAcrimedf,mapping=aes(x=PC2,y=PC1,color=crimedf2$cluster5)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Month Year") +
+  theme(text = element_text(size=8))
+
+
+crimedf2 %>% group_by(cluster5) %>% summarize(Count=n())
+
+```
+
+**Determine best number of clusters**  
+
+```{r fig.height=4, fig.width=4}
+set.seed(1234)
+wss <- (nrow(PCAcrimedf)-1)*sum(apply(PCAcrimedf,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(PCAcrimedf,centers=i)$withinss)
+
+plot(1:20, wss, type="b", 
+     xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+
+```     
+
+We conclude based on this 'elbow' technique that **4 clusters appears to be the optimum number**.
+
+\newpage
+#### Analysing clusters
+
+**Now, let's visualize the 4 clusters**
+
+```{r fig.height=6, fig.width=9}
+
+crimedf2$Area.Name <- rownames(crimedf2)
+
+crimedf2 %>% group_by(Area.Name,cluster4) %>% summarize() %>% arrange(cluster4,Area.Name) %>% 
+  kable() %>% kable_styling(font_size = 7)
+
+crimedf3 <- crimedf2 %>% select(-c(cluster3,cluster5)) %>% gather(-c(Area.Name,cluster4), key = 'Year.Month', value = 'n')
+
+# crimedf3 %>% group_by(Year.Month,cluster4) %>% summarize(n=sum(n)) %>%
+#   ggplot(aes(Year.Month, n, group=1, color=cluster4)) + geom_line() + facet_wrap(~cluster4,ncol=1)  +
+#     labs(title='Crimes in LA - Area Clusters',x = "Year.Month", y = "Count") +
+#     theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+```{r fig.height=4, fig.width=9}
+crimedf3 %>% group_by(Year.Month,cluster4) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Year.Month, n, group=cluster4, color=cluster4)) + geom_line()  +
+    labs(title='Crimes in LA - Area Clusters',x = "Year.Month", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+We observe that our clustering analysis was able to identify differences in crime volume by location that were stable over time.
+
+For the remaining work we will just look at 2017 which was the year with the most number of crimes.  
+**Filter on just 2017 data**  
+
+```{r}
+
+crime2017df <- crimedf %>% filter(year(Date.Occurred)==2017) 
+
+```
+
+### by Area and Crime Code
+
+***Start by exploding Crime.Code**  
+
+```{r}
+crime2017df2 <- crime2017df %>% select (Area.Name, Crime.Code) %>% 
+  group_by(Area.Name, Crime.Code) %>% summarize(n=n()) %>%
+  spread(key = Crime.Code, value = n, fill = 0)
+
+```
+
+After exploding the Crime.Code and summing by Area Name we now have `r ncol(crime2017df2)` columns and `r nrow(crime2017df2)` rows
+
+**Run PCA on dataset containing Crime.Codes and sums by Area**     
+
+```{r}
+crime2017df2[is.na(crime2017df2)] <- 0
+
+# colSums(is.na(crime2017df2))
+
+crime2017df2$Area.Name = as.character(crime2017df2$Area.Name)
+crime2017df2 <- crime2017df2 %>%
+     remove_rownames() %>%
+     column_to_rownames(var = 'Area.Name')
+
+# head(crime2017df2)
+
+PCAcrime2017 <- prcomp(crime2017df2, scale. = TRUE)
+# PCAcrime2017
+
+```
+
+**Histogram of the PCs**  
+
+```{r fig.height=3, fig.width=3}
+plot(PCAcrime2017)
+```
+
+We observe that *most of the information is in the first 2 PCs*.
+
+**Let's do a scatterplot the first 2 PCs**   
+
+```{r fig.height=2.5, fig.width=3}
+PCAcrime2017df <- as.data.frame(PCAcrime2017$x)
+
+ggplot(data=PCAcrime2017df,mapping=aes(PC2,PC1)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+```
+
+#### Clustering  
+
+**Run kmeans on PCs, start with 3 centers, plot**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster3_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 3)
+crime2017df2$cluster3 <- as.factor(cluster3_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster3)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster3) %>% summarize(Count=n())
+
+```
+
+**Try 4 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster4_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 4)
+crime2017df2$cluster4 <- as.factor(cluster4_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster4)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster4) %>% summarize(Count=n())
+
+```
+
+**Try 5 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster5_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 5)
+crime2017df2$cluster5 <- as.factor(cluster5_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster5)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster5) %>% summarize(Count=n())
+
+```
+
+**Determine best number of clusters**  
+
+```{r fig.height=4, fig.width=4}
+set.seed(1234)
+wss <- (nrow(PCAcrime2017df)-1)*sum(apply(PCAcrime2017df,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(PCAcrime2017df,centers=i)$withinss)
+
+plot(1:20, wss, type="b", 
+     xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+
+```     
+
+It is difficult to clearly determine the optimum number of clusters.  We have selected to use 5.  
+
+\newpage
+#### Analysing clusters
+
+**Let's visualize the 5 clusters**
+
+```{r}
+
+crime2017df2$Area.Name <- rownames(crime2017df2)
+
+crime2017df2 %>% group_by(Area.Name,cluster5) %>% summarize() %>% arrange(cluster5,Area.Name) %>% 
+  kable() %>% kable_styling(font_size = 7)
+
+crime2017df3 <- crime2017df2 %>% select(-c(cluster3,cluster4)) %>% gather(-c(Area.Name,cluster5), key = 'Crime.Code', value = 'n')
+
+crime2017df3 %>% group_by(Crime.Code,cluster5) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=1, color=cluster5)) + geom_line() + facet_wrap(~cluster5,ncol=1)  +
+    labs(title='Crimes in LA - Area Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+```{r fig.height=3}
+crime2017df3 %>% group_by(Crime.Code,cluster5) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=cluster5, color=cluster5)) + geom_line()  +
+    labs(title='Crimes in LA - Area Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+
+### by District and Crime Code
+
+**Start by exploding Crime.Code**
+
+```{r}
+crime2017df2 <- crime2017df %>% select (Reporting.District, Crime.Code) %>% 
+  group_by(Reporting.District, Crime.Code) %>% summarize(n=n()) %>%
+  spread(key = Crime.Code, value = n, fill = 0)
+
+```
+
+After exploding the Crime.Code and summing by Reporting District we now have `r ncol(crime2017df2)` columns and `r nrow(crime2017df2)` rows  
+
+**Run PCA on dataset containing Crime.Codes and sums by Reporting.District**  
+
+```{r}
+crime2017df2[is.na(crime2017df2)] <- 0
+
+# colSums(is.na(crime2017df2))
+
+crime2017df2$Reporting.District = as.character(crime2017df2$Reporting.District)
+crime2017df2 <- crime2017df2 %>%
+     remove_rownames() %>%
+     column_to_rownames(var = 'Reporting.District')
+
+# head(crime2017df2)
+
+PCAcrime2017 <- prcomp(crime2017df2, scale. = TRUE)
+# PCAcrime2017
+
+```
+
+**Histogram of the PCs**
+
+```{r fig.height=3, fig.width=3}
+plot(PCAcrime2017)
+```
+
+We once again observe that most of the information is in the first 2 PCs.
+
+**Let's do a scatterplot the first 2 PCs**  
+
+```{r fig.height=2.5, fig.width=3}
+PCAcrime2017df <- as.data.frame(PCAcrime2017$x)
+
+ggplot(data=PCAcrime2017df,mapping=aes(PC2,PC1)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District and Crime Code") +
+  theme(text = element_text(size=8))
+```
+
+#### Clustering  
+
+**Run kmeans on PCs, start with 3 centers, plot**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster3_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 3)
+crime2017df2$cluster3 <- as.factor(cluster3_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster3)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster3) %>% summarize(Count=n())
+
+```
+
+**Try 4 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster4_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 4)
+crime2017df2$cluster4 <- as.factor(cluster4_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster4)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster4) %>% summarize(Count=n())
+
+```
+
+**Try 5 clusters**  
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster5_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 5)
+crime2017df2$cluster5 <- as.factor(cluster5_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster5)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster5) %>% summarize(Count=n())
+
+```
+
+**Determine best number of clusters**  
+
+```{r fig.height=4, fig.width=4}
+set.seed(1234)
+wss <- (nrow(PCAcrime2017df)-1)*sum(apply(PCAcrime2017df,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(PCAcrime2017df,centers=i)$withinss)
+
+plot(1:20, wss, type="b", 
+     xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+
+```     
+
+Again, it is difficult to determine optimum number of clusters and we have opted to use 5.  
+
+#### Analysing clusters
+
+**Let's visualize the 5 clusters**  
+
+```{r}
+
+crime2017df2$Reporting.District <- rownames(crime2017df2)
+
+crime2017df3 <- crime2017df2 %>% select(-c(cluster3,cluster4)) %>% gather(-c(Reporting.District,cluster5), key = 'Crime.Code', value = 'n')
+
+crime2017df3 %>% group_by(Crime.Code,cluster5) %>% summarize(n=sum(n)) %>%
+ggplot(aes(Crime.Code, n, group=1, color=cluster5)) + geom_line() + facet_wrap(~cluster5,ncol=1)  +
+    labs(title='Crimes in LA - District Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+```
+
+```{r fig.height=3}
+crime2017df3 %>% group_by(Crime.Code,cluster5) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=cluster5, color=cluster5)) + geom_line()  +
+    labs(title='Crimes in LA - District Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+It appears that for both Areas and Districts the only meaningful difference in the clusters appears to be the number of crimes and not the types of crimes. 
+
+
+### by Area with respect to  Crime Code, Victim.Sex, Victim.Descent
+
+start by exploding Crime.Code
+
+```{r}
+
+crime2017df2 <- crime2017df %>% select (Area.Name, Crime.Code, Victim.Sex, Victim.Descent) %>%
+  mutate(x = paste(Crime.Code,Victim.Sex, Victim.Descent)) %>%
+  group_by(Area.Name,x) %>% summarize(n=n()) %>%
+  spread(key = x, value = n, fill = 0)
+
+```
+
+after exploding the Crime.Code and summing by Area Name we now have `r ncol(crime2017df2)` columns and `r nrow(crime2017df2)` rows
+
+Run PCA on dataset containing Crime.Codes and sums by Area   
+
+```{r}
+crime2017df2[is.na(crime2017df2)] <- 0
+
+# colSums(is.na(crime2017df2))
+
+crime2017df2$Area.Name = as.character(crime2017df2$Area.Name)
+crime2017df2 <- crime2017df2 %>%
+     remove_rownames() %>%
+     column_to_rownames(var = 'Area.Name')
+
+# head(crime2017df2)
+
+PCAcrime2017 <- prcomp(crime2017df2, scale. = TRUE)
+# PCAcrime2017
+
+```
+
+histogram of the PCs
+
+```{r fig.height=3, fig.width=3}
+plot(PCAcrime2017)
+```
+
+most of the information is in the first 2 PCs
+
+let's do a scatterplot the first 2 PCs  
+
+```{r fig.height=2.5, fig.width=3}
+PCAcrime2017df <- as.data.frame(PCAcrime2017$x)
+
+ggplot(data=PCAcrime2017df,mapping=aes(PC2,PC1)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+```
+
+#### Clustering  
+
+Determine best number of clusters
+
+```{r fig.height=4, fig.width=4}
+set.seed(1234)
+wss <- (nrow(PCAcrime2017df)-1)*sum(apply(PCAcrime2017df,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(PCAcrime2017df,centers=i)$withinss)
+
+plot(1:20, wss, type="b", 
+     xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+
+```     
+
+difficult to determine optimum number of clusters - using 6
+
+plot 6 clusters
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster6_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 6)
+crime2017df2$cluster6 <- as.factor(cluster6_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster6)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by Area and Crime Code") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster6) %>% summarize(Areas=n()) %>% 
+  kable() %>% kable_styling(font_size = 7)
+
+```
+
+#### Analysing clusters
+
+lets visualize the 6 clusters
+
+```{r}
+
+crime2017df2$Area.Name <- rownames(crime2017df2)
+
+crime2017df2 %>% group_by(Area.Name,cluster6) %>% summarize() %>% arrange(cluster6,Area.Name) %>% 
+  kable() %>% kable_styling(font_size = 7)
+
+crime2017df3 <- crime2017df2 %>% gather(-c(Area.Name,cluster6), key = 'x', value = 'n')
+crime2017df3 <- crime2017df3 %>% mutate(Crime.Code = substr(x,1,3), Victim.Sex = substr(x,5,5), Victim.Descent = substr(x,7,7))
+```
+
+```{r fig.height=4.5}
+a <- crime2017df3 %>% filter(cluster6==1) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 1") +
+    theme_void()
+b <-crime2017df3 %>% filter(cluster6==2) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 2") +
+    theme_void()
+c <- crime2017df3 %>% filter(cluster6==3) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 3") +
+    theme_void()
+d <- crime2017df3 %>% filter(cluster6==4) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 4") +
+    theme_void()
+e <-crime2017df3 %>% filter(cluster6==5) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 5") +
+    theme_void()
+f <-crime2017df3 %>% filter(cluster6==6) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 6") +
+    theme_void()
+multiplot(a,b,c,d,e,f, cols=2)
+```
+
+```{r fig.height=4.5}
+a <- crime2017df3 %>% filter(cluster6==1) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 1") +
+    theme_void()
+b <-crime2017df3 %>% filter(cluster6==2) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 2") +
+    theme_void()
+c <- crime2017df3 %>% filter(cluster6==3) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 3") +
+    theme_void()
+d <- crime2017df3 %>% filter(cluster6==4) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 4") +
+    theme_void()
+e <-crime2017df3 %>% filter(cluster6==5) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 5") +
+    theme_void()
+f <-crime2017df3 %>% filter(cluster6==6) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 6") +
+    theme_void()
+multiplot(a,b, cols=2)
+multiplot(c,d, cols=2)
+multiplot(e,f, cols=2)
+
+```
+
+Let's see if adding Victim information changes how the clusters are formed by Area Code  
+
+```{r}
+crime2017df3 %>% group_by(Crime.Code,cluster6) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=1, color=cluster6)) + geom_line() + facet_wrap(~cluster6,ncol=1)  +
+    labs(title='Crimes in LA - Area Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+```{r fig.height=3, fig.width=7}
+crime2017df3 %>% group_by(Crime.Code,cluster6) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=cluster6, color=cluster6)) + geom_line()  +
+    labs(title='Crimes in LA - Area Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+it doesn't seem like adding Victim information has made any difference - it appears that the clustering is still based primarily and areas with a higher number of crimes
+
+### by District with respect to Crime.Code, Victim.Sex, Victim.Descent
+
+start by exploding Crime.Code
+
+```{r}
+
+crime2017df2 <- crime2017df %>% select (Reporting.District, Crime.Code, Victim.Sex, Victim.Descent) %>%
+  mutate(x = paste(Crime.Code,Victim.Sex, Victim.Descent)) %>%
+  group_by(Reporting.District,x) %>% summarize(n=n()) %>%
+  spread(key = x, value = n, fill = 0)
+
+```
+
+after exploding the Crime.Code and summing by District we now have `r ncol(crime2017df2)` columns and `r nrow(crime2017df2)` rows
+
+Run PCA on dataset containing Crime.Codes and sums by District   
+
+```{r}
+crime2017df2[is.na(crime2017df2)] <- 0
+
+# colSums(is.na(crime2017df2))
+
+crime2017df2$Reporting.District = as.character(crime2017df2$Reporting.District)
+crime2017df2 <- crime2017df2 %>%
+     remove_rownames() %>%
+     column_to_rownames(var = 'Reporting.District')
+
+# head(crime2017df2)
+
+PCAcrime2017 <- prcomp(crime2017df2, scale. = TRUE)
+# PCAcrime2017
+
+```
+
+histogram of the PCs
+
+```{r fig.height=3, fig.width=3}
+plot(PCAcrime2017)
+```
+
+most of the information is in the first 2 PCs
+
+let's do a scatterplot the first 2 PCs  
+
+```{r fig.height=2.5, fig.width=3}
+PCAcrime2017df <- as.data.frame(PCAcrime2017$x)
+
+ggplot(data=PCAcrime2017df,mapping=aes(PC2,PC1)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District, Crime.Code, Victim.Sex, Victim.Descent") +
+  theme(text = element_text(size=8))
+```
+
+#### Clustering  
+
+Determine best number of clusters
+
+```{r fig.height=4, fig.width=4}
+set.seed(1234)
+wss <- (nrow(PCAcrime2017df)-1)*sum(apply(PCAcrime2017df,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(PCAcrime2017df,centers=i)$withinss)
+
+plot(1:20, wss, type="b", 
+     xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+
+```     
+
+difficult to determine optimum number of clusters - using 8  
+
+let's plot the k-means with 8 clusters
+
+```{r fig.height=3, fig.width=5}
+set.seed(1234)
+cluster8_PCAcrime2017df <- kmeans(PCAcrime2017df, centers = 8)
+crime2017df2$cluster8 <- as.factor(cluster8_PCAcrime2017df$cluster)
+
+ggplot(data=PCAcrime2017df,mapping=aes(x=PC2,y=PC1,color=crime2017df2$cluster8)) + geom_point() + 
+  labs(title = "Crimes in Los Angeles by District, Crime.Code, Victim.Sex, Victim.Descent") +
+  theme(text = element_text(size=8))
+
+
+crime2017df2 %>% group_by(cluster8) %>% summarize(Districts=n()) %>% 
+  kable() %>% kable_styling(font_size = 7)
+
+```
+
+#### Analysing clusters
+
+lets visualize the 8 clusters
+
+```{r}
+
+crime2017df2$Reporting.District <- rownames(crime2017df2)
+
+crime2017df3 <- crime2017df2 %>% gather(-c(Reporting.District,cluster8), key = 'x', value = 'n')
+crime2017df3 <- crime2017df3 %>% mutate(Crime.Code = substr(x,1,3), Victim.Sex = substr(x,5,5), Victim.Descent = substr(x,7,7))
+```
+
+```{r fig.height=6}
+a <- crime2017df3 %>% filter(cluster8==1) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 1") +
+    theme_void()
+b <-crime2017df3 %>% filter(cluster8==2) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 2") +
+    theme_void()
+c <- crime2017df3 %>% filter(cluster8==3) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 3") +
+    theme_void()
+d <- crime2017df3 %>% filter(cluster8==4) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 4") +
+    theme_void()
+e <-crime2017df3 %>% filter(cluster8==5) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 5") +
+    theme_void()
+f <- crime2017df3 %>% filter(cluster8==6) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 6") +
+    theme_void()
+g <- crime2017df3 %>% filter(cluster8==7) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 7") +
+    theme_void()
+h <-crime2017df3 %>% filter(cluster8==8) %>% group_by(Victim.Sex) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Sex)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 8") +
+    theme_void()
+multiplot(a,b,c,d,e,f,g,h, cols=2)
+```
+
+```{r fig.height=4.5}
+a <- crime2017df3 %>% filter(cluster8==1) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 1") +
+    theme_void()
+b <-crime2017df3 %>% filter(cluster8==2) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 2") +
+    theme_void()
+c <- crime2017df3 %>% filter(cluster8==3) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 3") +
+    theme_void()
+d <- crime2017df3 %>% filter(cluster8==4) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 4") +
+    theme_void()
+e <-crime2017df3 %>% filter(cluster8==5) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 5") +
+    theme_void()
+f <- crime2017df3 %>% filter(cluster8==6) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 6") +
+    theme_void()
+g <- crime2017df3 %>% filter(cluster8==7) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 7") +
+    theme_void()
+h <-crime2017df3 %>% filter(cluster8==8) %>% group_by(Victim.Descent) %>% summarize(n = sum(n)) %>%
+  ggplot(aes(x = "", y = n, fill = Victim.Descent)) +
+    geom_bar(width = 1, stat = "identity", color = "white") +
+    coord_polar("y", start = 0) + 
+    labs(title = "Cluster 8") +
+    theme_void()
+multiplot(a,b, cols=2)
+multiplot(c,d, cols=2)
+multiplot(e,f, cols=2)
+multiplot(g,h, cols=2)
+
+```
+
+Let's see if adding Victim information has changed how the Reporting Districts are distributed amongst the clusters
+```{r}
+crime2017df3 %>% group_by(Crime.Code,cluster8) %>% summarize(n=sum(n)) %>%
+ggplot(aes(Crime.Code, n, group=1, color=cluster8)) + geom_line() + facet_wrap(~cluster8,ncol=1)  +
+    labs(title='Crimes in LA - District Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+```
+
+```{r fig.height=3, fig.width=7}
+crime2017df3 %>% group_by(Crime.Code,cluster8) %>% summarize(n=sum(n)) %>%
+  ggplot(aes(Crime.Code, n, group=cluster8, color=cluster8)) + geom_line()  +
+    labs(title='Crimes in LA - District Clusters',x = "Crime.Code", y = "Count") +
+    theme(text=element_text(size=8),axis.text.x = element_text(angle = 90, hjust = 0))
+
+```
+
+it doesn't seem like adding Victim information has made any difference - it appears that the clustering is still based primarily and districts with a higher number of crimes
+
+\newpage  
+# Results
+Our first attempt at K-means clustering analysis was able to identify four clusters where the differences in crime volume by location were stable over time.  That is, areas of high, medium-high, medium-low, and low crime - which addresses our original question.  While our study identifies differences between clusters by crime volume, there were fewer differences than we expected to see between these clusters based on other characteristics (such as victim and offender socio-economic characteristics) that might help to target police and victim services.  This finding nevertheless supports the concept of place-based policing - as the most significant differences we identified through our clustering analysis were between locations (by volume).  This is a complex and rich data set, and we view that clustering techniques, with further time to explore different avenues including patterns for crimes vs arrests (by location, socio-economic characteristics) which surfaced in our exploratory analysis would provide additional insight. 
+
+# Conclusion
+Our test for a succesful outcome was two-fold.  We hoped to distinguish between higher and lower crime neighbourhoods, and we have done so.  Our K-means clusters differentiate meaningfully by volume over time, supporting a place-based approach to policing.  However our study has not yet met our second test for success, which was to see a meaningful difference between the profiles of each cluster.  As such we view that our models require further refinement before they are ready for deployment, and before they are able to contribute a new perspective to an ongoing dialogue about crime patterns. Iteration is not uncommon in developing segments that serve business needs and dialogue and refinement are natural parts of the process that our time constraints have not allowed for.  We nevertheless hope that our exploratory process is useful in identifying further avenues of enquiry.
+
+
+# Bibliography
+Los Angeles Police Department (LAPD) website: http://www.lapdonline.org/#
+
+Farrington, et al, Piquero, in Piquero et al, *The Criminal Career Paradigm*, University of Chicago
